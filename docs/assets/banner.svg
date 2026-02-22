@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="200" rx="20" fill="url(#bg)"/>
+  <!-- Camera icon -->
+  <g transform="translate(50, 50)">
+    <rect x="10" y="30" width="80" height="60" rx="8" fill="none" stroke="white" stroke-width="3"/>
+    <circle cx="50" cy="60" r="18" fill="none" stroke="white" stroke-width="3"/>
+    <circle cx="50" cy="60" r="8" fill="white" opacity="0.5"/>
+    <rect x="35" y="25" width="30" height="10" rx="3" fill="none" stroke="white" stroke-width="2"/>
+    <!-- AI sparkle -->
+    <g transform="translate(75, 25)" fill="white">
+      <polygon points="0,-8 2,-2 8,0 2,2 0,8 -2,2 -8,0 -2,-2"/>
+    </g>
+  </g>
+  <!-- Text -->
+  <text x="170" y="85" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="700" fill="white">SmartPhoto</text>
+  <text x="170" y="120" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="white" opacity="0.85">AI-Powered Photo Organizer</text>
+  <text x="170" y="145" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="white" opacity="0.65">Classify · Detect · Organize · Pick Best</text>
+</svg>
