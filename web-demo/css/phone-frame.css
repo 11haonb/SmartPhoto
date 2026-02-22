@@ -1,0 +1,83 @@
+/* iPhone-style phone frame */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #1a1a2e;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.phone-frame {
+  position: relative;
+  width: 405px;
+  height: 872px;
+  background: #000;
+  border-radius: 50px;
+  padding: 15px;
+  box-shadow:
+    0 0 0 3px #333,
+    0 0 0 6px #1a1a1a,
+    0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.phone-notch {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 30px;
+  background: #000;
+  border-radius: 0 0 20px 20px;
+  z-index: 100;
+}
+
+.phone-notch::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 3px;
+}
+
+.phone-notch::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 25px;
+  width: 10px;
+  height: 10px;
+  background: #1a1a2e;
+  border-radius: 50%;
+}
+
+.phone-screen {
+  width: 375px;
+  height: 812px;
+  background: #fff;
+  border-radius: 38px;
+  overflow: hidden;
+  position: relative;
+}
+
+.phone-home-indicator {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 134px;
+  height: 5px;
+  background: #666;
+  border-radius: 3px;
+}

@@ -1,5 +1,5 @@
 import logging
-import random
+import secrets
 import string
 
 import redis.asyncio as redis
@@ -19,7 +19,7 @@ async def get_redis() -> redis.Redis:
 
 
 def _generate_code(length: int = 6) -> str:
-    return "".join(random.choices(string.digits, k=length))
+    return "".join(secrets.choice(string.digits) for _ in range(length))
 
 
 async def send_sms_code(phone: str) -> str:
@@ -29,14 +29,17 @@ async def send_sms_code(phone: str) -> str:
     if await r.exists(rate_key):
         raise ValueError("SMS sent too frequently, please try again later")
 
-    code = _generate_code(settings.SMS_CODE_LENGTH)
+    if settings.APP_ENV == "development":
+        code = "888888"
+    else:
+        code = _generate_code(settings.SMS_CODE_LENGTH)
 
     code_key = f"sms:code:{phone}"
     await r.setex(code_key, settings.SMS_CODE_EXPIRE_SECONDS, code)
     await r.setex(rate_key, settings.SMS_RATE_LIMIT_SECONDS, "1")
 
     if settings.APP_ENV == "development":
-        logger.info("DEV MODE - SMS code for %s: %s", phone, code)
+        logger.info("DEV MODE - SMS code for %s: %s (fixed code)", phone, code)
     else:
         await _send_aliyun_sms(phone, code)
 
