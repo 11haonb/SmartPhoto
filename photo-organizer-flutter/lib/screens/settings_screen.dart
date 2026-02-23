@@ -224,7 +224,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Color _accuracyColor(String accuracy) {
     switch (accuracy) {
       case '最高':
-        return Colors.purple;
+        return const Color(0xFF0891B2);
       case '高':
         return Colors.blue;
       case '中等':

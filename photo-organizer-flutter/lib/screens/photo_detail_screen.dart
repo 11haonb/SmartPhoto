@@ -136,7 +136,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                     if (analysis.isUnderexposed)
                       const QualityBadge(label: '欠曝', color: Colors.blue),
                     if (analysis.isScreenshot)
-                      const QualityBadge(label: '截图', color: Colors.purple),
+                      const QualityBadge(label: '截图', color: const Color(0xFF0891B2)),
                   ],
                 ),
               ),

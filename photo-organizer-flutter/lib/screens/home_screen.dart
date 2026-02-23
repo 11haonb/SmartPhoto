@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.star,
               title: '挑选最佳',
               description: '从连拍/相似照片中自动选出最好的一张',
-              color: Colors.purple,
+              color: const Color(0xFF0891B2),
             ),
             const SizedBox(height: 32),
             FilledButton.icon(

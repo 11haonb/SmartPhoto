@@ -188,7 +188,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                 if (detail.analysis?.isUnderexposed == true)
                   const QualityBadge(label: '欠曝', color: Colors.blue),
                 if (detail.analysis?.isScreenshot == true)
-                  const QualityBadge(label: '截图', color: Colors.purple),
+                  const QualityBadge(label: '截图', color: const Color(0xFF0891B2)),
               ],
             ),
             onTap: () => context.go('/photo/${detail.photo.id}'),
