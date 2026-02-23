@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 import imagehash
 from PIL import Image
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.ai.factory import create_provider
 from app.core.config import settings
-from app.core.database import async_session_factory
 from app.core.encryption import decrypt_api_key
 from app.core.storage import get_file_url
 from app.models import AIConfig, Batch, Photo, PhotoAnalysis, ProcessingTask
@@ -90,7 +90,12 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
     task_id = uuid.UUID(task_id_str)
     batch_id = uuid.UUID(batch_id_str)
 
-    async with async_session_factory() as db:
+    # Create a fresh engine with NullPool per invocation to avoid asyncpg
+    # connection pool / event-loop mismatch when called from Celery workers.
+    _engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+    _session_factory = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with _session_factory() as db:
         # Mark task as running
         result = await db.execute(select(ProcessingTask).where(ProcessingTask.id == task_id))
         task = result.scalar_one()
