@@ -69,9 +69,10 @@ class HuggingFaceProvider(AIProvider):
                     confidence=float(data.get("confidence", 0.6)),
                 )
         except Exception:
-            logger.error("HuggingFace classify failed", exc_info=True)
+            logger.error("HuggingFace classify failed, falling back to local", exc_info=True)
 
-        return ClassificationResult(category="other", sub_category=None, confidence=0.0)
+        from app.ai.providers.local_provider import LocalProvider
+        return await LocalProvider().classify(image_bytes)
 
     async def assess_quality(self, image_bytes: bytes) -> QualityResult:
         # Fallback to local analysis for quality since HF free tier is limited
