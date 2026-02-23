@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPhoto — AI 驱动的智能照片管理</title>
+<style>
+/* ============================================================
+   RESET & BASE
+============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  color:#0f172a;
+  background:#fff;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ============================================================
+   CSS VARIABLES — Mint Theme
+============================================================ */
+:root{
+  --primary:#0891b2;
+  --primary-dark:#0e7490;
+  --primary-light:#06b6d4;
+  --primary-xlight:#cffafe;
+  --primary-bg:#ecfeff;
+  --accent:#0284c7;
+  --text:#0f172a;
+  --text-muted:#64748b;
+  --text-light:#94a3b8;
+  --border:#e2e8f0;
+  --card-bg:#f8fafc;
+  --white:#fff;
+  --radius:12px;
+  --radius-lg:20px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow:0 4px 16px rgba(8,145,178,.08),0 2px 8px rgba(0,0,0,.04);
+  --shadow-lg:0 12px 40px rgba(8,145,178,.14),0 4px 16px rgba(0,0,0,.06);
+  --transition:.2s ease;
+}
+
+/* ============================================================
+   NAVBAR
+============================================================ */
+.navbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+}
+.navbar-inner{
+  max-width:1200px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;
+}
+.navbar-brand{
+  display:flex;align-items:center;gap:10px;
+  font-size:20px;font-weight:700;color:var(--primary-dark);
+}
+.brand-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#fff;
+}
+.navbar-links{display:flex;gap:32px;list-style:none}
+.navbar-links a{
+  font-size:14px;color:var(--text-muted);
+  transition:color var(--transition);
+}
+.navbar-links a:hover{color:var(--primary)}
+.navbar-cta{
+  padding:8px 20px;border-radius:8px;
+  background:var(--primary);color:#fff;
+  font-size:14px;font-weight:600;
+  transition:background var(--transition),transform var(--transition);
+}
+.navbar-cta:hover{background:var(--primary-dark);transform:translateY(-1px)}
+@media(max-width:768px){
+  .navbar-links{display:none}
+}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero{
+  background:linear-gradient(160deg,var(--primary-bg) 0%,#f0fdfa 40%,#fff 100%);
+  padding:100px 24px 80px;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;
+  top:-200px;right:-200px;
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(6,182,212,.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero::after{
+  content:'';position:absolute;
+  bottom:-100px;left:-100px;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(8,145,178,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-inner{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:64px;align-items:center;
+  position:relative;z-index:1;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:100px;
+  background:var(--primary-xlight);color:var(--primary-dark);
+  font-size:13px;font-weight:600;margin-bottom:20px;
+  border:1px solid rgba(8,145,178,.2);
+}
+.hero h1{
+  font-size:52px;font-weight:800;line-height:1.15;
+  color:var(--text);margin-bottom:20px;
+}
+.hero h1 span{
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-desc{
+  font-size:18px;color:var(--text-muted);
+  line-height:1.7;margin-bottom:36px;max-width:480px;
+}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:48px}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;border-radius:var(--radius);
+  background:var(--primary);color:#fff;
+  font-size:15px;font-weight:600;
+  transition:all var(--transition);
+  box-shadow:0 4px 14px rgba(8,145,178,.35);
+}
+.btn-primary:hover{
+  background:var(--primary-dark);
+  transform:translateY(-2px);
+  box-shadow:0 6px 20px rgba(8,145,178,.45);
+}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;border-radius:var(--radius);
+  background:#fff;color:var(--primary);
+  font-size:15px;font-weight:600;
+  border:1.5px solid var(--primary);
+  transition:all var(--transition);
+}
+.btn-secondary:hover{
+  background:var(--primary-bg);
+  transform:translateY(-2px);
+}
+.hero-stats{display:flex;gap:32px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat .num{
+  font-size:28px;font-weight:800;
+  color:var(--primary-dark);line-height:1;
+}
+.hero-stat .label{
+  font-size:12px;color:var(--text-muted);
+  margin-top:4px;white-space:nowrap;
+}
+.hero-visual{position:relative}
+
+/* Phone mockup */
+.phone-mockup{
+  position:relative;margin:0 auto;
+  width:280px;
+}
+.phone-frame{
+  background:linear-gradient(160deg,#1e293b,#334155);
+  border-radius:44px;padding:14px;
+  box-shadow:0 32px 64px rgba(0,0,0,.22),0 8px 24px rgba(0,0,0,.14),inset 0 0 0 1px rgba(255,255,255,.06);
+  position:relative;
+}
+.phone-frame::before{
+  content:'';position:absolute;
+  top:14px;left:50%;transform:translateX(-50%);
+  width:80px;height:22px;
+  background:#1e293b;border-radius:0 0 14px 14px;z-index:2;
+}
+.phone-screen{
+  border-radius:32px;overflow:hidden;
+  background:var(--primary-bg);
+  aspect-ratio:9/19.5;
+  position:relative;
+}
+.screen-content{padding:24px 16px;height:100%}
+.screen-header{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
+}
+.screen-title{font-size:14px;font-weight:700;color:var(--primary-dark)}
+.screen-subtitle{font-size:10px;color:var(--text-muted)}
+.screen-progress-bar{
+  height:4px;background:#e2e8f0;border-radius:2px;margin-bottom:16px;overflow:hidden;
+}
+.screen-progress-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--primary-light),var(--primary-dark));
+  width:72%;
+  animation:progress-anim 2.5s ease-in-out infinite alternate;
+}
+@keyframes progress-anim{from{width:40%}to{width:85%}}
+.screen-stage-label{
+  font-size:10px;color:var(--primary);font-weight:600;margin-bottom:12px;
+}
+.screen-photo-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:12px;
+}
+.screen-photo{
+  aspect-ratio:1;border-radius:6px;
+  position:relative;overflow:hidden;
+}
+.screen-photo-bg{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+}
+.screen-photo-badge{
+  position:absolute;bottom:2px;right:2px;
+  width:14px;height:14px;border-radius:50%;
+  font-size:8px;display:flex;align-items:center;justify-content:center;
+  color:#fff;
+}
+.screen-photo-badge.best{background:#22c55e}
+.screen-photo-badge.bad{background:#ef4444}
+.screen-summary{
+  background:#fff;border-radius:8px;padding:8px 10px;
+  display:flex;justify-content:space-between;
+}
+.sum-item{text-align:center}
+.sum-num{font-size:14px;font-weight:700;color:var(--primary-dark)}
+.sum-lbl{font-size:9px;color:var(--text-muted)}
+
+/* Floating chips around the phone */
+.float-chip{
+  position:absolute;
+  background:#fff;border-radius:10px;
+  padding:8px 12px;
+  font-size:11px;font-weight:600;
+  box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:6px;
+  white-space:nowrap;
+  animation:float 3s ease-in-out infinite;
+}
+.float-chip:nth-child(2){animation-delay:.5s}
+.float-chip:nth-child(3){animation-delay:1.2s}
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+.chip-1{top:10%;left:-40px}
+.chip-2{top:50%;right:-60px}
+.chip-3{bottom:10%;left:-30px}
+.chip-dot{width:8px;height:8px;border-radius:50%}
+
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:48px;text-align:center}
+  .hero h1{font-size:38px}
+  .hero-actions{justify-content:center}
+  .hero-stats{justify-content:center}
+  .hero-visual{order:-1}
+  .chip-1,.chip-2,.chip-3{display:none}
+}
+@media(max-width:480px){
+  .hero h1{font-size:30px}
+  .hero-desc{font-size:16px}
+}
+
+/* ============================================================
+   SECTION COMMONS
+============================================================ */
+section{padding:100px 24px}
+.section-tag{
+  display:inline-block;
+  padding:5px 14px;border-radius:100px;
+  background:var(--primary-xlight);color:var(--primary-dark);
+  font-size:12px;font-weight:600;letter-spacing:.6px;
+  text-transform:uppercase;margin-bottom:14px;
+}
+.section-title{
+  font-size:38px;font-weight:800;color:var(--text);
+  line-height:1.2;margin-bottom:14px;
+}
+.section-title span{
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.section-desc{
+  font-size:17px;color:var(--text-muted);
+  max-width:560px;line-height:1.7;
+}
+.section-header{text-align:center;margin-bottom:64px}
+.section-header .section-desc{margin:0 auto}
+.container{max-width:1200px;margin:0 auto}
+
+/* ============================================================
+   FEATURES
+============================================================ */
+.features{background:var(--card-bg)}
+.features-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:24px;
+}
+.feature-card{
+  background:#fff;border-radius:var(--radius-lg);
+  padding:32px 24px;
+  border:1px solid var(--border);
+  transition:all var(--transition);
+  position:relative;overflow:hidden;
+}
+.feature-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--primary-light),var(--primary-dark));
+  transform:scaleX(0);transform-origin:left;
+  transition:transform var(--transition);
+}
+.feature-card:hover{
+  transform:translateY(-6px);
+  box-shadow:var(--shadow-lg);
+  border-color:var(--primary-xlight);
+}
+.feature-card:hover::before{transform:scaleX(1)}
+.feature-icon{
+  width:52px;height:52px;border-radius:14px;
+  background:var(--primary-bg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin-bottom:20px;
+  transition:transform var(--transition);
+}
+.feature-card:hover .feature-icon{transform:scale(1.1)}
+.feature-title{
+  font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;
+}
+.feature-desc{
+  font-size:14px;color:var(--text-muted);line-height:1.7;
+}
+.feature-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.feature-tag{
+  padding:3px 10px;border-radius:100px;
+  background:var(--primary-bg);color:var(--primary-dark);
+  font-size:11px;font-weight:600;
+}
+@media(max-width:900px){.features-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.features-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   PIPELINE
+============================================================ */
+.pipeline{background:#fff}
+.pipeline-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.pipeline-stages{display:flex;flex-direction:column;gap:0}
+.pipeline-stage{
+  display:flex;gap:20px;align-items:flex-start;
+  padding:20px 0;position:relative;
+}
+.pipeline-stage:not(:last-child)::after{
+  content:'';position:absolute;
+  left:20px;top:52px;
+  width:2px;height:calc(100% - 12px);
+  background:linear-gradient(180deg,var(--primary-light),var(--border));
+}
+.stage-number{
+  width:40px;height:40px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  color:#fff;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  box-shadow:0 4px 12px rgba(8,145,178,.3);
+  position:relative;z-index:1;
+}
+.stage-body{}
+.stage-name{
+  font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;
+}
+.stage-desc{font-size:13px;color:var(--text-muted);line-height:1.6}
+.stage-detail{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
+}
+.stage-pill{
+  padding:2px 8px;border-radius:6px;
+  background:var(--primary-bg);color:var(--primary-dark);
+  font-size:11px;font-weight:500;
+}
+
+/* Pipeline visual */
+.pipeline-visual{
+  background:linear-gradient(160deg,var(--primary-bg),#f0fdfa);
+  border-radius:var(--radius-lg);
+  padding:32px;border:1px solid var(--primary-xlight);
+}
+.pipeline-visual-title{
+  font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:24px;text-align:center;
+}
+.pipeline-flow{display:flex;flex-direction:column;gap:8px}
+.flow-item{
+  background:#fff;border-radius:10px;padding:12px 16px;
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--border);
+  transition:all var(--transition);
+}
+.flow-item:hover{
+  border-color:var(--primary-light);
+  box-shadow:var(--shadow-sm);
+  transform:translateX(4px);
+}
+.flow-num{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.flow-label{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.flow-badge{
+  font-size:11px;color:var(--primary);
+  background:var(--primary-bg);
+  padding:2px 8px;border-radius:6px;font-weight:500;
+}
+.flow-arrow{
+  text-align:center;color:var(--primary-light);
+  font-size:16px;padding:2px 0;
+}
+.pipeline-footer{
+  margin-top:20px;padding:12px 16px;
+  background:linear-gradient(90deg,var(--primary-light),var(--primary-dark));
+  border-radius:10px;color:#fff;
+  text-align:center;font-size:13px;font-weight:600;
+}
+
+@media(max-width:900px){.pipeline-inner{grid-template-columns:1fr;gap:48px}}
+
+/* ============================================================
+   AI ENGINES
+============================================================ */
+.ai-engines{background:var(--card-bg)}
+.engines-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;
+}
+.engine-card{
+  background:#fff;border-radius:var(--radius-lg);
+  padding:28px 20px;
+  border:1.5px solid var(--border);
+  transition:all var(--transition);
+  position:relative;
+}
+.engine-card.featured{
+  border-color:var(--primary);
+  box-shadow:0 0 0 4px rgba(8,145,178,.08);
+}
+.engine-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:4px 14px;border-radius:100px;
+  background:linear-gradient(90deg,var(--primary-light),var(--primary-dark));
+  color:#fff;font-size:11px;font-weight:700;white-space:nowrap;
+}
+.engine-card:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow-lg);
+  border-color:var(--primary-light);
+}
+.engine-icon{
+  font-size:32px;margin-bottom:14px;text-align:center;
+}
+.engine-name{
+  font-size:16px;font-weight:700;color:var(--text);
+  margin-bottom:6px;text-align:center;
+}
+.engine-cost{
+  font-size:13px;text-align:center;margin-bottom:16px;
+  padding:4px 10px;border-radius:100px;display:inline-block;
+  width:100%;
+}
+.cost-free{background:#dcfce7;color:#166534}
+.cost-paid{background:#fef3c7;color:#92400e}
+.engine-attrs{list-style:none;display:flex;flex-direction:column;gap:6px}
+.engine-attrs li{
+  font-size:12px;color:var(--text-muted);
+  display:flex;align-items:flex-start;gap:6px;line-height:1.5;
+}
+.engine-attrs li::before{
+  content:'✓';color:var(--primary);font-weight:700;flex-shrink:0;margin-top:1px;
+}
+.accuracy-bar{margin-top:16px}
+.accuracy-label{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--text-muted);margin-bottom:4px;
+}
+.accuracy-track{height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden}
+.accuracy-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--primary-light),var(--primary-dark));
+}
+@media(max-width:900px){.engines-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.engines-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   TECH STACK
+============================================================ */
+.tech-stack{
+  background:linear-gradient(160deg,#0c4a6e 0%,var(--primary-dark) 50%,#0891b2 100%);
+  color:#fff;padding:80px 24px;
+}
+.tech-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.tech-card{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--radius-lg);
+  padding:24px;
+  transition:all var(--transition);
+}
+.tech-card:hover{
+  background:rgba(255,255,255,.14);
+  transform:translateY(-3px);
+}
+.tech-card-title{
+  font-size:13px;font-weight:700;opacity:.7;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;
+}
+.tech-items{display:flex;flex-wrap:wrap;gap:8px}
+.tech-item{
+  padding:5px 12px;border-radius:8px;
+  background:rgba(255,255,255,.1);
+  font-size:13px;font-weight:500;
+  transition:background var(--transition);
+}
+.tech-item:hover{background:rgba(255,255,255,.18)}
+.tech-stack .section-title{color:#fff}
+.tech-stack .section-desc{color:rgba(255,255,255,.75);margin:0 auto}
+@media(max-width:768px){.tech-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.tech-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   QUICK START
+============================================================ */
+.quickstart{background:#fff}
+.steps-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:48px;
+}
+.step-card{
+  background:var(--card-bg);border-radius:var(--radius-lg);
+  padding:28px 24px;border:1px solid var(--border);
+  position:relative;
+  transition:all var(--transition);
+}
+.step-card:hover{
+  transform:translateY(-4px);
+  box-shadow:var(--shadow);
+  border-color:var(--primary-xlight);
+}
+.step-num{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary-light),var(--primary-dark));
+  color:#fff;font-size:14px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;
+  box-shadow:0 4px 12px rgba(8,145,178,.3);
+}
+.step-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px}
+.step-desc{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:12px}
+.code-block{
+  background:#0f172a;color:#e2e8f0;
+  border-radius:10px;padding:14px 16px;
+  font-family:'Fira Code','Cascadia Code','Courier New',monospace;
+  font-size:12px;line-height:1.7;overflow-x:auto;
+}
+.code-block .comment{color:#64748b}
+.code-block .cmd{color:#7dd3fc}
+.code-block .string{color:#86efac}
+@media(max-width:768px){.steps-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   CTA BAND
+============================================================ */
+.cta-band{
+  background:linear-gradient(135deg,var(--primary-xlight) 0%,#f0fdfa 100%);
+  border-top:1px solid rgba(8,145,178,.15);
+  border-bottom:1px solid rgba(8,145,178,.15);
+  padding:80px 24px;text-align:center;
+}
+.cta-band h2{
+  font-size:36px;font-weight:800;color:var(--text);margin-bottom:14px;
+}
+.cta-band p{font-size:17px;color:var(--text-muted);max-width:500px;margin:0 auto 32px}
+.cta-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+
+/* ============================================================
+   FOOTER
+============================================================ */
+footer{
+  background:#0f172a;color:#94a3b8;
+  padding:60px 24px 32px;
+}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-grid{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:48px;margin-bottom:48px;
+}
+.footer-brand{font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.footer-brand .brand-icon{flex-shrink:0}
+.footer-brand-desc{font-size:14px;line-height:1.7;margin-bottom:16px}
+.footer-social{display:flex;gap:12px}
+.social-link{
+  width:36px;height:36px;border-radius:9px;
+  background:rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:background var(--transition);
+}
+.social-link:hover{background:rgba(255,255,255,.14)}
+.footer-heading{font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:10px}
+.footer-links a{font-size:14px;color:#64748b;transition:color var(--transition)}
+.footer-links a:hover{color:var(--primary-light)}
+.footer-divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin-bottom:24px}
+.footer-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-bottom p{font-size:13px}
+.footer-badges{display:flex;gap:8px;flex-wrap:wrap}
+.footer-badge{
+  padding:4px 10px;border-radius:6px;
+  background:rgba(255,255,255,.06);
+  font-size:11px;font-weight:500;color:#64748b;
+}
+@media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;gap:32px}}
+@media(max-width:560px){.footer-grid{grid-template-columns:1fr}}
+
+/* ============================================================
+   SCROLL ANIMATIONS
+============================================================ */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .55s ease,transform .55s ease}
+.reveal.visible{opacity:1;transform:none}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+.reveal-delay-4{transition-delay:.4s}
+
+/* ============================================================
+   SCROLLBAR
+============================================================ */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--primary-xlight);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--primary-light)}
+</style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="#" class="navbar-brand">
+      <div class="brand-icon">&#128247;</div>
+      SmartPhoto
+    </a>
+    <ul class="navbar-links">
+      <li><a href="#features">功能</a></li>
+      <li><a href="#pipeline">处理流程</a></li>
+      <li><a href="#ai-engines">AI 引擎</a></li>
+      <li><a href="#quickstart">快速开始</a></li>
+    </ul>
+    <a href="https://github.com" class="navbar-cta">GitHub &#8599;</a>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-badge">
+        <span>&#9889;</span> AI 驱动 · 零配置启动
+      </div>
+      <h1>让 <span>AI</span> 帮你管理每一张照片</h1>
+      <p class="hero-desc">
+        SmartPhoto 用五阶段 AI 流水线，自动完成时间线整理、质量检测、智能分类与最佳照片挑选。支持本地离线到 Claude Vision 四种引擎，随时切换。
+      </p>
+      <div class="hero-actions">
+        <a href="#quickstart" class="btn-primary">&#9658;&nbsp; 快速部署</a>
+        <a href="#features" class="btn-secondary">&#128196;&nbsp; 查看功能</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">5</div><div class="label">处理阶段</div></div>
+        <div class="hero-stat"><div class="num">4</div><div class="label">AI 引擎</div></div>
+        <div class="hero-stat"><div class="num">12</div><div class="label">API 接口</div></div>
+        <div class="hero-stat"><div class="num">100%</div><div class="label">开源免费</div></div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <!-- Floating chips -->
+      <div class="float-chip chip-1">
+        <div class="chip-dot" style="background:#22c55e"></div>
+        已处理 128 张
+      </div>
+      <div class="float-chip chip-2">
+        <div class="chip-dot" style="background:#0891b2"></div>
+        Claude Vision
+      </div>
+      <div class="float-chip chip-3">
+        <div class="chip-dot" style="background:#f59e0b"></div>
+        发现 12 张重复
+      </div>
+
+      <div class="phone-mockup">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="screen-content">
+              <div class="screen-header">
+                <div>
+                  <div class="screen-title">SmartPhoto</div>
+                  <div class="screen-subtitle">AI 整理中…</div>
+                </div>
+                <span style="font-size:18px">&#128247;</span>
+              </div>
+              <div class="screen-progress-bar">
+                <div class="screen-progress-fill"></div>
+              </div>
+              <div class="screen-stage-label">&#9654; 第 3 阶段：智能分类</div>
+              <div class="screen-photo-grid">
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#cffafe">&#127774;</div><div class="screen-photo-badge best">&#10003;</div></div>
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#fef3c7">&#129332;</div><div class="screen-photo-badge best">&#10003;</div></div>
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#fce7f3">&#128578;</div></div>
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#f0fdf4">&#127961;</div></div>
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#fff7ed">&#127858;</div><div class="screen-photo-badge best">&#10003;</div></div>
+                <div class="screen-photo"><div class="screen-photo-bg" style="background:#eff6ff">&#127947;</div><div class="screen-photo-badge bad">&#10007;</div></div>
+              </div>
+              <div class="screen-summary">
+                <div class="sum-item"><div class="sum-num">48</div><div class="sum-lbl">已整理</div></div>
+                <div class="sum-item"><div class="sum-num" style="color:#22c55e">36</div><div class="sum-lbl">优质</div></div>
+                <div class="sum-item"><div class="sum-num" style="color:#ef4444">12</div><div class="sum-lbl">待删除</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">核心功能</span>
+      <h2 class="section-title">四大 AI 能力<span>，全自动处理</span></h2>
+      <p class="section-desc">从照片导入到最终输出，SmartPhoto 覆盖整个照片管理生命周期</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">&#128197;</div>
+        <div class="feature-title">时间线自动整理</div>
+        <div class="feature-desc">自动提取 EXIF 元数据，按拍摄日期、地点、相机型号智能分组，无需手动建文件夹。</div>
+        <div class="feature-tags">
+          <span class="feature-tag">EXIF 提取</span>
+          <span class="feature-tag">GPS 定位</span>
+          <span class="feature-tag">自动分组</span>
+        </div>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">&#128269;</div>
+        <div class="feature-title">AI 质量检测</div>
+        <div class="feature-desc">检测模糊（Laplacian 方差）、过曝、欠曝、截图等问题，将低质量照片标记为可删除。</div>
+        <div class="feature-tags">
+          <span class="feature-tag">模糊检测</span>
+          <span class="feature-tag">曝光分析</span>
+          <span class="feature-tag">截图识别</span>
+        </div>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">&#129302;</div>
+        <div class="feature-title">智能场景分类</div>
+        <div class="feature-desc">识别人像（自拍/群照/肖像）、风景（自然/建筑/城市）、美食、文档等场景类别，精确打标。</div>
+        <div class="feature-tags">
+          <span class="feature-tag">人像识别</span>
+          <span class="feature-tag">场景分类</span>
+          <span class="feature-tag">置信度评分</span>
+        </div>
+      </div>
+      <div class="feature-card reveal reveal-delay-3">
+        <div class="feature-icon">&#11088;</div>
+        <div class="feature-title">最佳照片挑选</div>
+        <div class="feature-desc">用感知哈希（pHash）找出相似/重复照片组，AI 自动从每组中挑出构图最佳、画质最清晰的一张。</div>
+        <div class="feature-tags">
+          <span class="feature-tag">pHash 去重</span>
+          <span class="feature-tag">自动精选</span>
+          <span class="feature-tag">分组对比</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PIPELINE ===== -->
+<section class="pipeline" id="pipeline">
+  <div class="container">
+    <div class="pipeline-inner">
+      <div>
+        <span class="section-tag">处理流程</span>
+        <h2 class="section-title">五阶段<span> AI 流水线</span></h2>
+        <p class="section-desc" style="margin-bottom:40px">每次处理任务都经过完整的五个阶段，通过 Celery 异步队列调度，前端实时轮询进度。</p>
+        <div class="pipeline-stages">
+          <div class="pipeline-stage reveal">
+            <div class="stage-number">1</div>
+            <div class="stage-body">
+              <div class="stage-name">EXIF 提取与时间线</div>
+              <div class="stage-desc">读取拍摄时间、相机型号、GPS 坐标和画面方向，按日期自动分组建立时间线。</div>
+              <div class="stage-detail">
+                <span class="stage-pill">taken_at</span>
+                <span class="stage-pill">camera_model</span>
+                <span class="stage-pill">GPS</span>
+                <span class="stage-pill">pHash 计算</span>
+              </div>
+            </div>
+          </div>
+          <div class="pipeline-stage reveal reveal-delay-1">
+            <div class="stage-number">2</div>
+            <div class="stage-body">
+              <div class="stage-name">质量分析</div>
+              <div class="stage-desc">Laplacian 方差检测模糊，直方图分析曝光，分辨率模式识别截图。</div>
+              <div class="stage-detail">
+                <span class="stage-pill">模糊 &lt;100</span>
+                <span class="stage-pill">过曝 &gt;230</span>
+                <span class="stage-pill">欠曝 &lt;30</span>
+              </div>
+            </div>
+          </div>
+          <div class="pipeline-stage reveal reveal-delay-2">
+            <div class="stage-number">3</div>
+            <div class="stage-body">
+              <div class="stage-name">智能分类</div>
+              <div class="stage-desc">AI 引擎识别主类别与子类别，输出置信度评分，写入 photo_analyses 表。</div>
+              <div class="stage-detail">
+                <span class="stage-pill">person</span>
+                <span class="stage-pill">landscape</span>
+                <span class="stage-pill">food</span>
+                <span class="stage-pill">document</span>
+              </div>
+            </div>
+          </div>
+          <div class="pipeline-stage reveal reveal-delay-3">
+            <div class="stage-number">4</div>
+            <div class="stage-body">
+              <div class="stage-name">相似度分组</div>
+              <div class="stage-desc">比较感知哈希汉明距离，≤10 判定为相似，统一分配 group_id。</div>
+              <div class="stage-detail">
+                <span class="stage-pill">pHash 对比</span>
+                <span class="stage-pill">汉明距离≤10</span>
+                <span class="stage-pill">group_id</span>
+              </div>
+            </div>
+          </div>
+          <div class="pipeline-stage reveal reveal-delay-4">
+            <div class="stage-number">5</div>
+            <div class="stage-body">
+              <div class="stage-name">最佳照片挑选</div>
+              <div class="stage-desc">AI 对每个相似组内的照片排名，标记 is_best_in_group = true，完成任务。</div>
+              <div class="stage-detail">
+                <span class="stage-pill">AI 排名</span>
+                <span class="stage-pill">is_best</span>
+                <span class="stage-pill">任务完成</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="pipeline-visual">
+          <div class="pipeline-visual-title">&#9654; 实时处理进度</div>
+          <div class="pipeline-flow">
+            <div class="flow-item">
+              <div class="flow-num">1</div>
+              <div class="flow-label">EXIF 提取</div>
+              <div class="flow-badge" style="background:#dcfce7;color:#166534">&#10003; 完成</div>
+            </div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-item">
+              <div class="flow-num">2</div>
+              <div class="flow-label">质量检测</div>
+              <div class="flow-badge" style="background:#dcfce7;color:#166534">&#10003; 完成</div>
+            </div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-item" style="border-color:var(--primary-light)">
+              <div class="flow-num">3</div>
+              <div class="flow-label">智能分类</div>
+              <div class="flow-badge" style="background:var(--primary-bg);color:var(--primary);animation:pulse 1.5s ease infinite">&#9679; 运行中</div>
+            </div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-item" style="opacity:.45">
+              <div class="flow-num">4</div>
+              <div class="flow-label">相似度分组</div>
+              <div class="flow-badge">等待中</div>
+            </div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-item" style="opacity:.45">
+              <div class="flow-num">5</div>
+              <div class="flow-label">最佳挑选</div>
+              <div class="flow-badge">等待中</div>
+            </div>
+          </div>
+          <div class="pipeline-footer">
+            Celery 异步调度 · 每 3 秒轮询进度 · 实时更新
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI ENGINES ===== -->
+<section class="ai-engines" id="ai-engines">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">AI 引擎</span>
+      <h2 class="section-title">四种引擎<span>，按需切换</span></h2>
+      <p class="section-desc">工厂模式设计，同一套接口驱动四种 AI 后端，无需重新上传照片即可随时切换</p>
+    </div>
+    <div class="engines-grid">
+      <div class="engine-card reveal">
+        <div class="engine-icon">&#128421;</div>
+        <div class="engine-name">本地离线</div>
+        <div class="engine-cost cost-free">完全免费</div>
+        <ul class="engine-attrs">
+          <li>无需 API 密钥</li>
+          <li>Pillow + NumPy 驱动</li>
+          <li>适合批量处理</li>
+          <li>网络隔离场景</li>
+        </ul>
+        <div class="accuracy-bar">
+          <div class="accuracy-label"><span>准确率</span><span>基础</span></div>
+          <div class="accuracy-track"><div class="accuracy-fill" style="width:45%"></div></div>
+        </div>
+      </div>
+      <div class="engine-card reveal reveal-delay-1">
+        <div class="engine-icon">&#129303;</div>
+        <div class="engine-name">HuggingFace</div>
+        <div class="engine-cost cost-free">免费额度</div>
+        <ul class="engine-attrs">
+          <li>可选 API Key</li>
+          <li>每月 30K 推理免费</li>
+          <li>开源模型生态</li>
+          <li>中等准确率</li>
+        </ul>
+        <div class="accuracy-bar">
+          <div class="accuracy-label"><span>准确率</span><span>中等</span></div>
+          <div class="accuracy-track"><div class="accuracy-fill" style="width:62%"></div></div>
+        </div>
+      </div>
+      <div class="engine-card reveal reveal-delay-2">
+        <div class="engine-icon">&#127775;</div>
+        <div class="engine-name">通义千问 VL</div>
+        <div class="engine-cost cost-paid">按量计费</div>
+        <ul class="engine-attrs">
+          <li>阿里云 dashscope</li>
+          <li>中文优化</li>
+          <li>国内访问快速</li>
+          <li>高准确率</li>
+        </ul>
+        <div class="accuracy-bar">
+          <div class="accuracy-label"><span>准确率</span><span>高</span></div>
+          <div class="accuracy-track"><div class="accuracy-fill" style="width:78%"></div></div>
+        </div>
+      </div>
+      <div class="engine-card featured reveal reveal-delay-3">
+        <div class="engine-badge">&#11088; 最高精度</div>
+        <div class="engine-icon">&#129504;</div>
+        <div class="engine-name">Claude Vision</div>
+        <div class="engine-cost cost-paid">按 Token 计费</div>
+        <ul class="engine-attrs">
+          <li>Anthropic 官方 SDK</li>
+          <li>最强视觉理解</li>
+          <li>复杂场景精准</li>
+          <li>生产推荐首选</li>
+        </ul>
+        <div class="accuracy-bar">
+          <div class="accuracy-label"><span>准确率</span><span>最高</span></div>
+          <div class="accuracy-track"><div class="accuracy-fill" style="width:95%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TECH STACK ===== -->
+<section class="tech-stack">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag" style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9)">技术栈</span>
+      <h2 class="section-title">生产就绪的<span style="-webkit-text-fill-color:var(--primary-xlight)">全栈架构</span></h2>
+      <p class="section-desc">从移动端到云存储，每一层都采用经过验证的开源技术</p>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-card reveal">
+        <div class="tech-card-title">&#128241; 移动端 / Web</div>
+        <div class="tech-items">
+          <span class="tech-item">Flutter 3.x</span>
+          <span class="tech-item">Dart</span>
+          <span class="tech-item">Provider</span>
+          <span class="tech-item">Dio</span>
+          <span class="tech-item">go_router</span>
+          <span class="tech-item">Vanilla JS</span>
+        </div>
+      </div>
+      <div class="tech-card reveal reveal-delay-1">
+        <div class="tech-card-title">&#9881; 后端</div>
+        <div class="tech-items">
+          <span class="tech-item">FastAPI 0.115</span>
+          <span class="tech-item">Python 3.12</span>
+          <span class="tech-item">Celery</span>
+          <span class="tech-item">asyncpg</span>
+          <span class="tech-item">SQLAlchemy</span>
+          <span class="tech-item">Pydantic</span>
+        </div>
+      </div>
+      <div class="tech-card reveal reveal-delay-2">
+        <div class="tech-card-title">&#129302; AI / 图像</div>
+        <div class="tech-items">
+          <span class="tech-item">anthropic</span>
+          <span class="tech-item">dashscope</span>
+          <span class="tech-item">Pillow</span>
+          <span class="tech-item">imagehash</span>
+          <span class="tech-item">NumPy</span>
+          <span class="tech-item">SciPy</span>
+        </div>
+      </div>
+      <div class="tech-card reveal">
+        <div class="tech-card-title">&#128452; 存储 / 队列</div>
+        <div class="tech-items">
+          <span class="tech-item">PostgreSQL 16</span>
+          <span class="tech-item">Redis 7</span>
+          <span class="tech-item">MinIO</span>
+          <span class="tech-item">AWS S3</span>
+          <span class="tech-item">Aliyun COS</span>
+        </div>
+      </div>
+      <div class="tech-card reveal reveal-delay-1">
+        <div class="tech-card-title">&#128274; 安全 / 认证</div>
+        <div class="tech-items">
+          <span class="tech-item">JWT (PyJWT)</span>
+          <span class="tech-item">Fernet</span>
+          <span class="tech-item">SMS 验证码</span>
+          <span class="tech-item">Aliyun SMS</span>
+          <span class="tech-item">HTTPS</span>
+        </div>
+      </div>
+      <div class="tech-card reveal reveal-delay-2">
+        <div class="tech-card-title">&#128640; 部署</div>
+        <div class="tech-items">
+          <span class="tech-item">Docker</span>
+          <span class="tech-item">Docker Compose</span>
+          <span class="tech-item">Nginx</span>
+          <span class="tech-item">Alembic</span>
+          <span class="tech-item">Uvicorn</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== QUICK START ===== -->
+<section class="quickstart" id="quickstart">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">快速开始</span>
+      <h2 class="section-title">三步<span>完成本地部署</span></h2>
+      <p class="section-desc">基于 Docker Compose，开发环境一键拉起，包含全部依赖服务</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">1</div>
+        <div class="step-title">克隆仓库</div>
+        <div class="step-desc">克隆项目，复制环境变量配置文件</div>
+        <div class="code-block">
+<span class="comment"># 克隆项目</span>
+<span class="cmd">git clone</span> <span class="string">https://github.com/your/smartphoto</span>
+<span class="cmd">cd</span> smartphoto/photo-organizer-backend
+
+<span class="comment"># 复制并编辑配置</span>
+<span class="cmd">cp</span> .env.example .env
+        </div>
+      </div>
+      <div class="step-card reveal reveal-delay-1">
+        <div class="step-num">2</div>
+        <div class="step-title">启动服务</div>
+        <div class="step-desc">Docker Compose 自动拉起 API、Worker、PostgreSQL、Redis、MinIO</div>
+        <div class="code-block">
+<span class="comment"># 构建并启动全部服务</span>
+<span class="cmd">docker compose</span> \
+  -f docker-compose.dev.yml \
+  up --build -d
+
+<span class="comment"># 查看服务状态</span>
+<span class="cmd">docker compose ps</span>
+        </div>
+      </div>
+      <div class="step-card reveal reveal-delay-2">
+        <div class="step-num">3</div>
+        <div class="step-title">访问 &amp; 测试</div>
+        <div class="step-desc">API 文档在 28000 端口，Web Demo 在 3000 端口，MinIO 控制台在 29001 端口</div>
+        <div class="code-block">
+<span class="comment"># API 文档 (Swagger)</span>
+http://localhost:<span class="string">28000</span>/docs
+
+<span class="comment"># Web Demo</span>
+http://localhost:<span class="string">3000</span>
+
+<span class="comment"># MinIO 控制台</span>
+http://localhost:<span class="string">29001</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA BAND ===== -->
+<div class="cta-band">
+  <h2>准备好让 AI 整理你的照片了吗？</h2>
+  <p>开源免费，支持本地完全离线运行，数据完全由你掌控</p>
+  <div class="cta-actions">
+    <a href="https://github.com" class="btn-primary">&#128279;&nbsp; 访问 GitHub</a>
+    <a href="#quickstart" class="btn-secondary">&#128196;&nbsp; 部署文档</a>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div>
+        <div class="footer-brand">
+          <div class="brand-icon">&#128247;</div>
+          SmartPhoto
+        </div>
+        <p class="footer-brand-desc">AI 驱动的开源照片管理系统，支持多种 AI 引擎，五阶段智能处理流水线。</p>
+        <div class="footer-social">
+          <a href="https://github.com" class="social-link">&#128279;</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-heading">功能</div>
+        <ul class="footer-links">
+          <li><a href="#features">时间线整理</a></li>
+          <li><a href="#features">质量检测</a></li>
+          <li><a href="#features">智能分类</a></li>
+          <li><a href="#features">最佳挑选</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-heading">AI 引擎</div>
+        <ul class="footer-links">
+          <li><a href="#ai-engines">本地离线</a></li>
+          <li><a href="#ai-engines">HuggingFace</a></li>
+          <li><a href="#ai-engines">通义千问 VL</a></li>
+          <li><a href="#ai-engines">Claude Vision</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-heading">资源</div>
+        <ul class="footer-links">
+          <li><a href="#quickstart">快速开始</a></li>
+          <li><a href="https://github.com">API 文档</a></li>
+          <li><a href="https://github.com">部署指南</a></li>
+          <li><a href="https://github.com">更新日志</a></li>
+        </ul>
+      </div>
+    </div>
+    <hr class="footer-divider">
+    <div class="footer-bottom">
+      <p>© 2026 SmartPhoto &mdash; MIT License</p>
+      <div class="footer-badges">
+        <span class="footer-badge">Python 3.12</span>
+        <span class="footer-badge">FastAPI</span>
+        <span class="footer-badge">Flutter</span>
+        <span class="footer-badge">PostgreSQL</span>
+        <span class="footer-badge">Docker</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll reveal animation
+(function() {
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(function(el) {
+    observer.observe(el);
+  });
+})();
+
+// Pulse animation for "running" badge
+var style = document.createElement('style');
+style.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
