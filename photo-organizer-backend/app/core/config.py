@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: str = "change-me-to-a-32-byte-hex-string"
 
     STORAGE_ENDPOINT: str = "http://minio:9000"
+    STORAGE_PUBLIC_URL: str = ""  # Public-facing URL for browser access, e.g. http://localhost:29000
     STORAGE_ACCESS_KEY: str = "minioadmin"
     STORAGE_SECRET_KEY: str = "minioadmin"
     STORAGE_BUCKET: str = "photo-organizer"

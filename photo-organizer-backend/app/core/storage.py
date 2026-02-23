@@ -39,7 +39,8 @@ def delete_file(key: str) -> None:
 
 
 def get_file_url(key: str) -> str:
-    return f"{settings.STORAGE_ENDPOINT}/{settings.STORAGE_BUCKET}/{key}"
+    base = settings.STORAGE_PUBLIC_URL or settings.STORAGE_ENDPOINT
+    return f"{base}/{settings.STORAGE_BUCKET}/{key}"
 
 
 def generate_thumbnail(image_bytes: bytes, size: int = 300) -> bytes:
