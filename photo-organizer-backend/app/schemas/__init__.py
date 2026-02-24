@@ -51,7 +51,7 @@ class AIProviderInfo(BaseModel):
 
 
 class AIConfigCreate(BaseModel):
-    provider: str = Field(..., pattern="^(local|huggingface|tongyi|claude)$")
+    provider: str = Field(..., pattern="^(local|clip|huggingface|tongyi|claude)$")
     api_key: str | None = None
     model: str | None = None
 

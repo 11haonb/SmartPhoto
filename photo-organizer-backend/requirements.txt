@@ -29,6 +29,10 @@ anthropic==0.42.0
 openai==1.59.7
 dashscope==1.20.14
 
+# CLIP local inference
+transformers==4.46.3
+torch==2.5.1
+
 # Configuration
 pydantic-settings==2.7.1
 python-dotenv==1.0.1

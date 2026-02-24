@@ -27,6 +27,14 @@ AVAILABLE_PROVIDERS = [
         accuracy="基础",
     ),
     AIProviderInfo(
+        provider="clip",
+        name="CLIP 本地推理",
+        description="使用 OpenAI CLIP 模型进行零样本图像分类，本地运行，无需 API Key",
+        requires_api_key=False,
+        free_tier="无限制",
+        accuracy="中等",
+    ),
+    AIProviderInfo(
         provider="huggingface",
         name="HuggingFace",
         description="使用 HuggingFace 免费推理 API，适合轻度使用",

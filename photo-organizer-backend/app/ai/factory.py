@@ -1,5 +1,6 @@
 from app.ai.base import AIProvider
 from app.ai.providers.local_provider import LocalProvider
+from app.ai.providers.clip_provider import CLIPProvider
 from app.ai.providers.claude_provider import ClaudeProvider
 from app.ai.providers.tongyi_provider import TongyiProvider
 from app.ai.providers.huggingface_provider import HuggingFaceProvider
@@ -14,6 +15,8 @@ def create_provider(
     match provider_name:
         case "local":
             return LocalProvider()
+        case "clip":
+            return CLIPProvider()
         case "claude":
             if not api_key:
                 raise ValueError("Claude provider requires an API key")

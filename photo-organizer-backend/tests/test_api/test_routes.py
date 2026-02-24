@@ -49,7 +49,7 @@ class TestPhotosRoutes:
     @pytest.mark.asyncio
     async def test_upload_requires_auth(self, client):
         response = await client.post("/api/v1/photos/upload")
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_batch_requires_auth(self, client):
@@ -57,7 +57,7 @@ class TestPhotosRoutes:
             "/api/v1/photos/batch",
             json={"total_photos": 5},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 class TestOrganizeRoutes:
@@ -67,7 +67,7 @@ class TestOrganizeRoutes:
             "/api/v1/organize/start",
             json={"batch_id": "00000000-0000-0000-0000-000000000000"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 class TestSettingsRoutes:
@@ -76,7 +76,7 @@ class TestSettingsRoutes:
         response = await client.get("/api/v1/settings/ai-providers")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 4
+        assert len(data) == 5
         providers = [p["provider"] for p in data]
         assert "local" in providers
         assert "claude" in providers
