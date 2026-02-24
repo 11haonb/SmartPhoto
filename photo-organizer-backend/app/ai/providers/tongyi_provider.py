@@ -55,6 +55,14 @@ class TongyiProvider(AIProvider):
             )
             response.raise_for_status()
             data = response.json()
+            usage = data.get("usage", {})
+            logger.info(
+                "Tongyi usage model=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+                self._model,
+                usage.get("prompt_tokens"),
+                usage.get("completion_tokens"),
+                usage.get("total_tokens"),
+            )
             return data["choices"][0]["message"]["content"]
 
     def _parse_json(self, text: str) -> dict | list:
