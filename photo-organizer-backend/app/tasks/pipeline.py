@@ -100,86 +100,96 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
 
             provider = await _get_provider(db, task.user_id)
 
-            # ── Stage 1: EXIF Extraction + pHash (single download per photo) ──
-            photo_bytes_cache: dict[uuid.UUID, tuple[bytes, bytes]] = {}
-            for i, photo in enumerate(photos):
-                try:
-                    original_bytes, compressed_bytes = _load_photo_bytes(photo)
-                    photo_bytes_cache[photo.id] = (original_bytes, compressed_bytes)
-                except Exception:
-                    logger.warning("Failed to download photo %s", photo.id)
-                    await _update_task_progress(db, task_id, 1, i + 1, total)
-                    continue
+            # ── Stage 1-3: Process in batches of 20 to cap memory usage ──
+            BATCH_SIZE = 20
+            for batch_start in range(0, total, BATCH_SIZE):
+                batch = photos[batch_start: batch_start + BATCH_SIZE]
+                photo_bytes_cache: dict[uuid.UUID, tuple[bytes, bytes]] = {}
 
-                if not photo.taken_at:
+                # Stage 1: EXIF + pHash
+                for i, photo in enumerate(batch):
+                    global_i = batch_start + i
                     try:
-                        exif = extract_exif(original_bytes)
-                        for key, value in exif.items():
-                            if value is not None:
-                                setattr(photo, key, value)
+                        original_bytes, compressed_bytes = _load_photo_bytes(photo)
+                        photo_bytes_cache[photo.id] = (original_bytes, compressed_bytes)
                     except Exception:
-                        logger.warning("EXIF extraction failed for %s", photo.id)
+                        logger.warning("Failed to download photo %s", photo.id)
+                        await _update_task_progress(db, task_id, 1, global_i + 1, total)
+                        continue
 
-                try:
-                    img = Image.open(io.BytesIO(compressed_bytes))
-                    photo.phash = str(imagehash.phash(img))
-                except Exception:
-                    logger.warning("pHash computation failed for %s", photo.id)
+                    if not photo.taken_at:
+                        try:
+                            exif = extract_exif(original_bytes)
+                            for key, value in exif.items():
+                                if value is not None:
+                                    setattr(photo, key, value)
+                        except Exception:
+                            logger.warning("EXIF extraction failed for %s", photo.id)
 
-                await _update_task_progress(db, task_id, 1, i + 1, total)
+                    try:
+                        img = Image.open(io.BytesIO(compressed_bytes))
+                        photo.phash = str(imagehash.phash(img))
+                    except Exception:
+                        logger.warning("pHash computation failed for %s", photo.id)
 
-            await db.commit()
+                    await _update_task_progress(db, task_id, 1, global_i + 1, total)
 
-            # ── Stage 2: Quality Analysis ──
-            for i, photo in enumerate(photos):
-                try:
-                    _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
-                    if compressed_bytes is None:
-                        raise ValueError("No cached bytes")
-                    quality = await provider.assess_quality(compressed_bytes)
+                await db.commit()
 
-                    analysis = PhotoAnalysis(
-                        photo_id=photo.id,
-                        quality_score=quality.quality_score,
-                        is_blurry=quality.is_blurry,
-                        is_overexposed=quality.is_overexposed,
-                        is_underexposed=quality.is_underexposed,
-                        is_screenshot=quality.is_screenshot,
-                        is_invalid=quality.is_invalid,
-                        invalid_reason=quality.invalid_reason,
-                        ai_provider=provider.__class__.__name__,
-                    )
-                    db.add(analysis)
-                except Exception:
-                    logger.error("Quality analysis failed for %s", photo.id, exc_info=True)
+                # Stage 2: Quality Analysis
+                for i, photo in enumerate(batch):
+                    global_i = batch_start + i
+                    try:
+                        _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
+                        if compressed_bytes is None:
+                            raise ValueError("No cached bytes")
+                        quality = await provider.assess_quality(compressed_bytes)
 
-                await _update_task_progress(db, task_id, 2, i + 1, total)
+                        analysis = PhotoAnalysis(
+                            photo_id=photo.id,
+                            quality_score=quality.quality_score,
+                            is_blurry=quality.is_blurry,
+                            is_overexposed=quality.is_overexposed,
+                            is_underexposed=quality.is_underexposed,
+                            is_screenshot=quality.is_screenshot,
+                            is_invalid=quality.is_invalid,
+                            invalid_reason=quality.invalid_reason,
+                            ai_provider=provider.__class__.__name__,
+                        )
+                        db.add(analysis)
+                    except Exception:
+                        logger.error("Quality analysis failed for %s", photo.id, exc_info=True)
 
-            await db.commit()
+                    await _update_task_progress(db, task_id, 2, global_i + 1, total)
 
-            # ── Stage 3: Classification ──
-            for i, photo in enumerate(photos):
-                try:
-                    _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
-                    if compressed_bytes is None:
-                        raise ValueError("No cached bytes")
-                    classification = await provider.classify(compressed_bytes)
+                await db.commit()
 
-                    result = await db.execute(
-                        select(PhotoAnalysis).where(PhotoAnalysis.photo_id == photo.id)
-                    )
-                    analysis = result.scalar_one_or_none()
-                    if analysis:
-                        analysis.category = classification.category
-                        analysis.sub_category = classification.sub_category
-                        analysis.confidence = classification.confidence
-                        analysis.analyzed_at = datetime.now(timezone.utc)
-                except Exception:
-                    logger.error("Classification failed for %s", photo.id, exc_info=True)
+                # Stage 3: Classification
+                for i, photo in enumerate(batch):
+                    global_i = batch_start + i
+                    try:
+                        _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
+                        if compressed_bytes is None:
+                            raise ValueError("No cached bytes")
+                        classification = await provider.classify(compressed_bytes)
 
-                await _update_task_progress(db, task_id, 3, i + 1, total)
+                        res = await db.execute(
+                            select(PhotoAnalysis).where(PhotoAnalysis.photo_id == photo.id)
+                        )
+                        analysis = res.scalar_one_or_none()
+                        if analysis:
+                            analysis.category = classification.category
+                            analysis.sub_category = classification.sub_category
+                            analysis.confidence = classification.confidence
+                            analysis.analyzed_at = datetime.now(timezone.utc)
+                    except Exception:
+                        logger.error("Classification failed for %s", photo.id, exc_info=True)
 
-            await db.commit()
+                    await _update_task_progress(db, task_id, 3, global_i + 1, total)
+
+                await db.commit()
+                # Explicitly release batch memory before next batch
+                photo_bytes_cache.clear()
 
             # ── Stage 4: Similarity Grouping (bucket-based O(n) approximation) ──
             photos_with_hash = [p for p in photos if p.phash]
@@ -223,11 +233,14 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
             group_count = len(groups)
             for gi, (group_id, group_photos) in enumerate(groups.items()):
                 try:
-                    images = [
-                        (str(gp.id), photo_bytes_cache[gp.id][1])
-                        for gp in group_photos
-                        if gp.id in photo_bytes_cache
-                    ]
+                    images = []
+                    for gp in group_photos:
+                        try:
+                            compressed_key = gp.compressed_path or gp.storage_path
+                            compressed_bytes = download_file(compressed_key)
+                            images.append((str(gp.id), compressed_bytes))
+                        except Exception:
+                            logger.warning("Failed to download photo %s for best-pick", gp.id)
                     if images:
                         best_results = await provider.pick_best(images)
                         best_ids = {br.photo_id for br in best_results if br.is_best}

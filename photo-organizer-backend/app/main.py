@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from app.core.config import settings
 from app.api.routes import auth, photos, organize, settings as settings_routes
@@ -24,6 +26,24 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
+
+    @application.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        import logging
+        logging.getLogger(__name__).error(
+            "Unhandled exception %s %s: %s", request.method, request.url.path, exc, exc_info=True
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
 
     application.include_router(
         auth.router,
