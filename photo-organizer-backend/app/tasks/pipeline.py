@@ -13,7 +13,7 @@ from sqlalchemy.pool import NullPool
 from app.ai.factory import create_provider
 from app.core.config import settings
 from app.core.encryption import decrypt_api_key
-from app.core.storage import get_file_url
+from app.core.storage import download_file, get_file_url
 from app.models import AIConfig, Batch, Photo, PhotoAnalysis, ProcessingTask
 from app.services.photo_service import extract_exif
 from app.tasks.worker import celery_app
@@ -70,20 +70,8 @@ async def _get_provider(db: AsyncSession, user_id: uuid.UUID):
 
 
 async def _get_photo_bytes(storage_path: str) -> bytes:
-    """Download photo bytes from storage. Uses compressed version if available."""
-    import boto3
-    from botocore.config import Config as BotoConfig
-
-    client = boto3.client(
-        "s3",
-        endpoint_url=settings.STORAGE_ENDPOINT,
-        aws_access_key_id=settings.STORAGE_ACCESS_KEY,
-        aws_secret_access_key=settings.STORAGE_SECRET_KEY,
-        region_name=settings.STORAGE_REGION,
-        config=BotoConfig(signature_version="s3v4"),
-    )
-    response = client.get_object(Bucket=settings.STORAGE_BUCKET, Key=storage_path)
-    return response["Body"].read()
+    """Download photo bytes from storage."""
+    return download_file(storage_path)
 
 
 async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:

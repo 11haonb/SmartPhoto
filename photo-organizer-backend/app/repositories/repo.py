@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import select, update
+from sqlalchemy import cast, func, select, update
+from sqlalchemy.dialects.postgresql import DATE
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -146,6 +147,7 @@ class PhotoRepository:
         return photo
 
     async def get_by_task_and_date(self, task_id: uuid.UUID, date_str: str) -> list[Photo]:
+        date_col = func.coalesce(Photo.taken_at, Photo.created_at)
         result = await self._db.execute(
             select(Photo)
             .options(selectinload(Photo.analysis))
@@ -153,15 +155,11 @@ class PhotoRepository:
             .join(ProcessingTask, ProcessingTask.batch_id == Batch.id)
             .where(
                 ProcessingTask.id == task_id,
-                # cast taken_at or created_at date to string for comparison
+                cast(date_col, DATE) == date_str,
             )
             .order_by(Photo.taken_at.asc().nullslast(), Photo.created_at.asc())
         )
-        photos = list(result.scalars().all())
-        return [
-            p for p in photos
-            if (p.taken_at or p.created_at).strftime("%Y-%m-%d") == date_str
-        ]
+        return list(result.scalars().all())
 
     async def get_by_task_and_category(self, task_id: uuid.UUID, category: str) -> list[Photo]:
         result = await self._db.execute(
@@ -234,11 +232,14 @@ class PhotoAnalysisRepository:
                 )
             )
             .values(is_best_in_group=False)
+            .execution_options(synchronize_session="fetch")
         )
 
     async def mark_best(self, photo_id: uuid.UUID) -> PhotoAnalysis | None:
         result = await self._db.execute(
-            select(PhotoAnalysis).where(PhotoAnalysis.photo_id == photo_id)
+            select(PhotoAnalysis)
+            .where(PhotoAnalysis.photo_id == photo_id)
+            .with_for_update()
         )
         analysis = result.scalar_one_or_none()
         if analysis:

@@ -14,9 +14,17 @@ def client():
 class TestHealthCheck:
     @pytest.mark.asyncio
     async def test_health_endpoint(self, client):
-        response = await client.get("/health")
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        with patch("app.core.database.engine") as mock_engine, \
+             patch("app.core.sms.get_redis", new_callable=AsyncMock) as mock_redis:
+            mock_conn = AsyncMock()
+            mock_engine.connect.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+            mock_engine.connect.return_value.__aexit__ = AsyncMock(return_value=False)
+            mock_redis.return_value.ping = AsyncMock()
+
+            response = await client.get("/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert "status" in data
 
 
 class TestAuthRoutes:

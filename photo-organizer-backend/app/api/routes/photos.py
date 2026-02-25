@@ -55,6 +55,8 @@ async def upload_photo(
         upload_result = await process_upload(photo_id, file_bytes, file.filename or "photo.jpg")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Upload processing failed")
 
     photo_repo = PhotoRepository(db)
     photo = await photo_repo.create(

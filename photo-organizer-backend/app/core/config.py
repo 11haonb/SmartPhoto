@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -43,7 +44,21 @@ class Settings(BaseSettings):
     THUMBNAIL_SIZE: int = 300
     COMPRESSED_SIZE: int = 1200
 
+    CORS_ORIGINS: str = "*"  # comma-separated list or "*"
+
     model_config = {"env_file": ".env", "case_sensitive": True}
+
+    @model_validator(mode="after")
+    def _validate_production_secrets(self) -> "Settings":
+        if self.APP_ENV == "production":
+            insecure = {"change-me", "change-me-to-a-32-byte-hex-string"}
+            if self.JWT_SECRET_KEY in insecure:
+                raise ValueError("JWT_SECRET_KEY must be set in production")
+            if self.ENCRYPTION_KEY in insecure:
+                raise ValueError("ENCRYPTION_KEY must be set in production")
+            if self.SECRET_KEY in insecure:
+                raise ValueError("SECRET_KEY must be set in production")
+        return self
 
 
 settings = Settings()

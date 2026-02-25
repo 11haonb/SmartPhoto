@@ -16,8 +16,11 @@ def create_app() -> FastAPI:
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=(
+            ["*"] if settings.CORS_ORIGINS == "*"
+            else [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+        ),
+        allow_credentials=settings.CORS_ORIGINS != "*",
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -50,7 +53,28 @@ def create_app() -> FastAPI:
 
     @application.get("/health")
     async def health_check():
-        return {"status": "ok"}
+        from sqlalchemy import text
+        from app.core.database import engine
+        from app.core.sms import get_redis
+
+        checks: dict[str, str] = {}
+
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            checks["db"] = "ok"
+        except Exception:
+            checks["db"] = "error"
+
+        try:
+            r = await get_redis()
+            await r.ping()
+            checks["redis"] = "ok"
+        except Exception:
+            checks["redis"] = "error"
+
+        overall = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
+        return {"status": overall, **checks}
 
     return application
 

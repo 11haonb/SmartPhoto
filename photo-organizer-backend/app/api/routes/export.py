@@ -23,6 +23,13 @@ async def _get_task_for_user(task_id: str, user_id: str, db: AsyncSession):
     return task
 
 
+def _streaming_response(buf, name: str, failed: int) -> StreamingResponse:
+    headers = {"Content-Disposition": f'attachment; filename="{name}"'}
+    if failed > 0:
+        headers["X-Failed-Files"] = str(failed)
+    return StreamingResponse(buf, media_type="application/zip", headers=headers)
+
+
 @router.get("/by-date/{task_id}")
 async def export_by_date(
     task_id: str,
@@ -37,13 +44,9 @@ async def export_by_date(
     if not photos:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No photos found for this date")
 
-    buf = build_zip(photos, quality)
+    buf, failed = build_zip(photos, quality)
     name = zip_filename("date", date, task_id, quality)
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
-    )
+    return _streaming_response(buf, name, failed)
 
 
 @router.get("/by-category/{task_id}")
@@ -60,13 +63,9 @@ async def export_by_category(
     if not photos:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No photos found for this category")
 
-    buf = build_zip(photos, quality)
+    buf, failed = build_zip(photos, quality)
     name = zip_filename("category", category, task_id, quality)
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
-    )
+    return _streaming_response(buf, name, failed)
 
 
 @router.get("/best/{task_id}")
@@ -82,10 +81,6 @@ async def export_best(
     if not photos:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No best photos found")
 
-    buf = build_zip(photos, quality)
+    buf, failed = build_zip(photos, quality)
     name = zip_filename("best", "", task_id, quality)
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{name}"'},
-    )
+    return _streaming_response(buf, name, failed)
