@@ -45,12 +45,19 @@ async def start_organize(
             detail=f"Batch is still {batch.status}, cannot start organizing",
         )
 
+    task_repo = ProcessingTaskRepository(db)
+    running = await task_repo.get_running_by_batch(request.batch_id)
+    if running:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A processing task is already running for this batch",
+        )
+
     photo_repo = PhotoRepository(db)
     photos = await photo_repo.get_by_batch(request.batch_id)
     if not photos:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No photos in batch")
 
-    task_repo = ProcessingTaskRepository(db)
     task = await task_repo.create(
         user_id=uuid.UUID(user_id),
         batch_id=request.batch_id,

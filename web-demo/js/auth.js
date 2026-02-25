@@ -15,10 +15,10 @@ const AuthPage = (() => {
         <div class="auth-subtitle">AI 智能照片整理助手</div>
         <div class="auth-form">
           <div class="input-group">
-            <input type="tel" id="phone-input" placeholder="请输入手机号" maxlength="11" value="13800138000">
+            <input type="tel" id="phone-input" placeholder="请输入手机号" maxlength="11">
           </div>
           <div class="input-group code-row">
-            <input type="text" id="code-input" placeholder="验证码" maxlength="6" value="888888">
+            <input type="text" id="code-input" placeholder="验证码" maxlength="6">
             <button class="send-btn" id="send-code-btn" onclick="AuthPage.sendCode()">获取验证码</button>
           </div>
           <button class="login-btn" id="login-btn" onclick="AuthPage.login()">登 录</button>

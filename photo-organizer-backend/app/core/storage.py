@@ -10,16 +10,24 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+_s3_client = None
+
 
 def _get_s3_client():
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.STORAGE_ENDPOINT,
-        aws_access_key_id=settings.STORAGE_ACCESS_KEY,
-        aws_secret_access_key=settings.STORAGE_SECRET_KEY,
-        region_name=settings.STORAGE_REGION,
-        config=BotoConfig(signature_version="s3v4"),
-    )
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client(
+            "s3",
+            endpoint_url=settings.STORAGE_ENDPOINT,
+            aws_access_key_id=settings.STORAGE_ACCESS_KEY,
+            aws_secret_access_key=settings.STORAGE_SECRET_KEY,
+            region_name=settings.STORAGE_REGION,
+            config=BotoConfig(
+                signature_version="s3v4",
+                max_pool_connections=20,
+            ),
+        )
+    return _s3_client
 
 
 def upload_file(file_bytes: bytes, key: str, content_type: str) -> str:

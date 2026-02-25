@@ -5,6 +5,8 @@ const ResultsPage = (() => {
   let _data = null;
   let _activeTab = 'timeline';
   let _taskId = null;
+  let _page = 1;
+  let _totalPages = 1;
 
   function esc(str) {
     return String(str ?? '')
@@ -20,7 +22,9 @@ const ResultsPage = (() => {
 
     setTimeout(async () => {
       try {
-        _data = await API.getOrganizeResults(_taskId);
+        _page = 1;
+        _data = await API.getOrganizeResults(_taskId, _page);
+        _totalPages = _data.total_pages || 1;
         renderTabContent();
       } catch (err) {
         const body = document.getElementById('results-body');
@@ -119,6 +123,32 @@ const ResultsPage = (() => {
   window._ResultsMarkBest = handleMarkBest;
   window._ResultsExport = handleExport;
 
+  async function loadMore() {
+    if (_page >= _totalPages) return;
+    try {
+      _page++;
+      const more = await API.getOrganizeResults(_taskId, _page);
+      // Merge timeline, categories, similarity_groups, invalid_photos
+      _data.timeline = [...(_data.timeline || []), ...(more.timeline || [])];
+      _data.categories = [...(_data.categories || []), ...(more.categories || [])];
+      _data.similarity_groups = [...(_data.similarity_groups || []), ...(more.similarity_groups || [])];
+      _data.invalid_photos = [...(_data.invalid_photos || []), ...(more.invalid_photos || [])];
+      _totalPages = more.total_pages || _totalPages;
+      renderTabContent();
+    } catch (err) {
+      App.showToast('加载更多失败: ' + err.message);
+    }
+  }
+
+  window._ResultsLoadMore = loadMore;
+
+  function _paginationBar() {
+    if (_page >= _totalPages) return '';
+    return `<div style="text-align:center;padding:16px">
+      <button class="export-btn" style="padding:10px 24px" onclick="_ResultsLoadMore()">加载更多 (${_page}/${_totalPages})</button>
+    </div>`;
+  }
+
   function renderTimeline() {
     const groups = _data.timeline || [];
     if (groups.length === 0) {
@@ -138,7 +168,7 @@ const ResultsPage = (() => {
           `).join('')}
         </div>
       </div>
-    `).join('');
+    `).join('') + _paginationBar();
   }
 
   function renderCategories() {
@@ -225,6 +255,8 @@ const ResultsPage = (() => {
     _data = null;
     _activeTab = 'timeline';
     _taskId = null;
+    _page = 1;
+    _totalPages = 1;
   }
 
   return { render, switchTab, destroy };

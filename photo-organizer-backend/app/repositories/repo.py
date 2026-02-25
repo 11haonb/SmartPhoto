@@ -113,6 +113,12 @@ class BatchRepository:
         )
         return list(result.scalars().all())
 
+    async def delete(self, batch_id: uuid.UUID) -> None:
+        batch = await self.get_by_id(batch_id)
+        if batch:
+            await self._db.delete(batch)
+            await self._db.flush()
+
 
 class PhotoRepository:
     def __init__(self, db: AsyncSession):
@@ -288,6 +294,15 @@ class ProcessingTaskRepository:
             setattr(task, key, value)
         await self._db.flush()
         return task
+
+    async def get_running_by_batch(self, batch_id: uuid.UUID) -> ProcessingTask | None:
+        result = await self._db.execute(
+            select(ProcessingTask).where(
+                ProcessingTask.batch_id == batch_id,
+                ProcessingTask.status.in_(("pending", "running")),
+            )
+        )
+        return result.scalar_one_or_none()
 
 
 class UserSelectionRepository:

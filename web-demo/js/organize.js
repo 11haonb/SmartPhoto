@@ -6,6 +6,8 @@ const OrganizePage = (() => {
   let _taskId = null;
   let _pollInterval = 3000;
   const _maxInterval = 30000;
+  let _pollCount = 0;
+  const _maxPolls = 120; // ~30 min at max interval
 
   const STAGES = [
     { name: 'EXIF提取', desc: '读取拍摄时间、相机型号、GPS' },
@@ -65,6 +67,12 @@ const OrganizePage = (() => {
 
   async function pollStatus() {
     if (!_taskId) return;
+
+    _pollCount++;
+    if (_pollCount > _maxPolls) {
+      App.toast('整理超时，请刷新页面查看状态');
+      return;
+    }
 
     try {
       const status = await API.getOrganizeStatus(_taskId);
@@ -140,6 +148,7 @@ const OrganizePage = (() => {
     _timer = null;
     _taskId = null;
     _pollInterval = 3000;
+    _pollCount = 0;
   }
 
   return { render, destroy };

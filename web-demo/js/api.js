@@ -107,8 +107,8 @@ const API = (() => {
     return request('GET', `/organize/status/${taskId}`);
   }
 
-  async function getOrganizeResults(taskId) {
-    return request('GET', `/organize/results/${taskId}`);
+  async function getOrganizeResults(taskId, page = 1, pageSize = 50) {
+    return request('GET', `/organize/results/${taskId}?page=${page}&page_size=${pageSize}`);
   }
 
   // Settings

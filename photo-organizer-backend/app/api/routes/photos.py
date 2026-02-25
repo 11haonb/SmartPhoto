@@ -108,8 +108,7 @@ async def delete_batch(
                     pass
         await photo_repo.delete(photo.id)
 
-    await batch_repo._db.delete(batch)
-    await batch_repo._db.flush()
+    await batch_repo.delete(batch_id)
 
 
 @router.get("/batch/{batch_id}", response_model=list[PhotoResponse])

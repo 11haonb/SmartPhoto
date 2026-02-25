@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -23,6 +24,14 @@ async def _get_task_for_user(task_id: str, user_id: str, db: AsyncSession):
     return task
 
 
+def _parse_date(date_str: str) -> str:
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Invalid date: {date_str}")
+    return date_str
+
+
 def _streaming_response(buf, name: str, failed: int) -> StreamingResponse:
     headers = {"Content-Disposition": f'attachment; filename="{name}"'}
     if failed > 0:
@@ -38,6 +47,7 @@ async def export_by_date(
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
+    _parse_date(date)
     await _get_task_for_user(task_id, user_id, db)
     photo_repo = PhotoRepository(db)
     photos = await photo_repo.get_by_task_and_date(uuid.UUID(task_id), date)
