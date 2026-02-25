@@ -39,7 +39,7 @@ def _streaming_response(buf, name: str, failed: int) -> StreamingResponse:
     return StreamingResponse(buf, media_type="application/zip", headers=headers)
 
 
-@router.get("/by-date/{task_id}")
+@router.get("/by-date/{task_id}", status_code=status.HTTP_200_OK)
 async def export_by_date(
     task_id: str,
     date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
@@ -59,7 +59,7 @@ async def export_by_date(
     return _streaming_response(buf, name, failed)
 
 
-@router.get("/by-category/{task_id}")
+@router.get("/by-category/{task_id}", status_code=status.HTTP_200_OK)
 async def export_by_category(
     task_id: str,
     category: str = Query(...),
@@ -78,7 +78,7 @@ async def export_by_category(
     return _streaming_response(buf, name, failed)
 
 
-@router.get("/best/{task_id}")
+@router.get("/best/{task_id}", status_code=status.HTTP_200_OK)
 async def export_best(
     task_id: str,
     quality: Literal["original", "compressed"] = Query("compressed"),

@@ -38,11 +38,26 @@ const AlbumPage = (() => {
     `;
   }
 
+  const _ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'image/webp']);
+  const _MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
   function onFilesSelected(input) {
     const files = Array.from(input.files);
     if (files.length === 0) return;
     if (files.length > 100) {
       App.toast('最多选择100张照片');
+      return;
+    }
+
+    const invalid = files.filter(f => !_ALLOWED_TYPES.has(f.type));
+    if (invalid.length > 0) {
+      App.toast(`不支持的文件类型: ${invalid.map(f => f.name).join(', ')}`);
+      return;
+    }
+
+    const oversized = files.filter(f => f.size > _MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      App.toast(`文件过大 (最大10MB): ${oversized.map(f => f.name).join(', ')}`);
       return;
     }
 

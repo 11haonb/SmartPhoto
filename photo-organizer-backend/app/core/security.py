@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import uuid
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -12,6 +13,7 @@ security_scheme = HTTPBearer()
 def create_access_token(user_id: str) -> str:
     payload = {
         "sub": user_id,
+        "jti": str(uuid.uuid4()),
         "exp": datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
         "iat": datetime.now(timezone.utc),
     }

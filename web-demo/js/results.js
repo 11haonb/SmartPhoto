@@ -92,7 +92,7 @@ const ResultsPage = (() => {
     try {
       await API.downloadZip(path);
     } catch (err) {
-      App.showToast('导出失败: ' + err.message);
+      App.toast('导出失败: ' + err.message);
     }
   }
 
@@ -115,7 +115,7 @@ const ResultsPage = (() => {
       }
       renderTabContent();
     } catch (err) {
-      App.showToast('操作失败: ' + err.message);
+      App.toast('操作失败: ' + err.message);
     }
   }
 
@@ -136,7 +136,7 @@ const ResultsPage = (() => {
       _totalPages = more.total_pages || _totalPages;
       renderTabContent();
     } catch (err) {
-      App.showToast('加载更多失败: ' + err.message);
+      App.toast('加载更多失败: ' + err.message);
     }
   }
 

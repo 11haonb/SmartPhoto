@@ -69,7 +69,7 @@ async def list_batches(
     return await repo.get_by_user(uuid.UUID(user_id))
 
 
-@router.post("/batch", response_model=BatchResponse)
+@router.post("/batch", response_model=BatchResponse, status_code=status.HTTP_201_CREATED)
 async def create_batch(
     request: BatchCreateRequest,
     user_id: str = Depends(get_current_user_id),
@@ -137,7 +137,7 @@ async def get_batch_photos(
 
 # ── Photo ──
 
-@router.post("/upload", response_model=PhotoUploadResponse)
+@router.post("/upload", response_model=PhotoUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     batch_id: str = Form(...),
     file: UploadFile = File(...),

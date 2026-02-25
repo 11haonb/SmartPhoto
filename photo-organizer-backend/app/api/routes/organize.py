@@ -28,7 +28,7 @@ from app.services.photo_service import get_photo_urls
 router = APIRouter()
 
 
-@router.post("/start", response_model=OrganizeStartResponse)
+@router.post("/start", response_model=OrganizeStartResponse, status_code=status.HTTP_201_CREATED)
 async def start_organize(
     request: OrganizeStartRequest,
     user_id: str = Depends(get_current_user_id),
