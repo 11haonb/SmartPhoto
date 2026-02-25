@@ -28,7 +28,10 @@ const App = (() => {
     if (mod) {
       const html = mod.render(_currentParams);
       if (html instanceof Promise) {
-        html.then(h => { app.innerHTML = h; });
+        html.then(h => { app.innerHTML = h; }).catch(err => {
+          app.innerHTML = `<div class="empty-state"><p>页面加载失败</p></div>`;
+          console.error('Page render error:', err);
+        });
       } else {
         app.innerHTML = html;
       }

@@ -85,15 +85,19 @@ class BatchRepository:
         )
         return result.scalar_one_or_none()
 
-    async def increment_uploaded(self, batch_id: uuid.UUID) -> Batch | None:
-        batch = await self.get_by_id(batch_id)
-        if batch is None:
-            return None
-        batch.uploaded_photos = batch.uploaded_photos + 1
-        if batch.uploaded_photos >= batch.total_photos:
-            batch.status = "uploaded"
-        await self._db.flush()
-        return batch
+    async def increment_uploaded(self, batch_id: uuid.UUID) -> None:
+        await self._db.execute(
+            update(Batch)
+            .where(Batch.id == batch_id)
+            .values(
+                uploaded_photos=Batch.uploaded_photos + 1,
+                status=func.case(
+                    (Batch.uploaded_photos + 1 >= Batch.total_photos, "uploaded"),
+                    else_=Batch.status,
+                ),
+            )
+            .execution_options(synchronize_session="fetch")
+        )
 
     async def update_status(self, batch_id: uuid.UUID, status: str) -> None:
         batch = await self.get_by_id(batch_id)

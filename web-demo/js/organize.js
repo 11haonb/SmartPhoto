@@ -4,6 +4,8 @@
 const OrganizePage = (() => {
   let _timer = null;
   let _taskId = null;
+  let _pollInterval = 3000;
+  const _maxInterval = 30000;
 
   const STAGES = [
     { name: 'EXIF提取', desc: '读取拍摄时间、相机型号、GPS' },
@@ -67,6 +69,7 @@ const OrganizePage = (() => {
     try {
       const status = await API.getOrganizeStatus(_taskId);
       updateUI(status);
+      _pollInterval = 3000; // reset on success
 
       if (status.status === 'completed') {
         App.toast('整理完成！');
@@ -78,10 +81,12 @@ const OrganizePage = (() => {
         return;
       }
 
-      _timer = setTimeout(pollStatus, 3000);
+      _timer = setTimeout(pollStatus, _pollInterval);
     } catch (err) {
       App.toast('查询进度失败: ' + err.message);
-      _timer = setTimeout(pollStatus, 5000);
+      // Exponential backoff on error, cap at maxInterval
+      _pollInterval = Math.min(_pollInterval * 2, _maxInterval);
+      _timer = setTimeout(pollStatus, _pollInterval);
     }
   }
 
@@ -134,6 +139,7 @@ const OrganizePage = (() => {
     if (_timer) clearTimeout(_timer);
     _timer = null;
     _taskId = null;
+    _pollInterval = 3000;
   }
 
   return { render, destroy };

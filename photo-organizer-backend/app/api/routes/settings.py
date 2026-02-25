@@ -94,16 +94,22 @@ async def update_settings(
     repo = AIConfigRepository(db)
 
     if request.ai_config:
-        encrypted_key = None
-        if request.ai_config.api_key:
-            encrypted_key = encrypt_api_key(request.ai_config.api_key)
+        try:
+            encrypted_key = None
+            if request.ai_config.api_key:
+                encrypted_key = encrypt_api_key(request.ai_config.api_key)
 
-        config = await repo.upsert(
-            user_id=uuid.UUID(user_id),
-            provider=request.ai_config.provider,
-            encrypted_api_key=encrypted_key,
-            model=request.ai_config.model,
-        )
+            await repo.upsert(
+                user_id=uuid.UUID(user_id),
+                provider=request.ai_config.provider,
+                encrypted_api_key=encrypted_key,
+                model=request.ai_config.model,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save AI configuration",
+            )
 
     config = await repo.get_active_by_user(uuid.UUID(user_id))
     ai_config_resp = None

@@ -17,6 +17,9 @@ celery_app.conf.update(
     task_track_started=True,
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    task_reject_on_worker_lost=True,
+    task_soft_time_limit=1800,   # 30 min: raises SoftTimeLimitExceeded
+    task_time_limit=2100,        # 35 min: hard kill
 )
 
 celery_app.autodiscover_tasks(["app.tasks"], related_name="pipeline")

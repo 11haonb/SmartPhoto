@@ -1,6 +1,7 @@
 import io
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 import magic
@@ -19,6 +20,20 @@ ALLOWED_MIME_TYPES = {
     "image/heif",
     "image/webp",
 }
+
+_SAFE_SUFFIXES = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"}
+
+
+def _sanitize_filename(filename: str) -> str:
+    """Strip path components and keep only the safe base filename."""
+    name = Path(filename).name
+    # Remove any remaining path separators
+    name = name.replace("/", "_").replace("\\", "_")
+    # Ensure suffix is allowed
+    p = Path(name)
+    if p.suffix.lower() not in _SAFE_SUFFIXES:
+        name = p.stem + ".jpg"
+    return name or "photo.jpg"
 
 
 def validate_image(file_bytes: bytes, filename: str) -> str:
@@ -110,7 +125,8 @@ async def process_upload(
     file_bytes: bytes,
     filename: str,
 ) -> dict:
-    mime_type = validate_image(file_bytes, filename)
+    safe_filename = _sanitize_filename(filename)
+    mime_type = validate_image(file_bytes, safe_filename)
     exif_data = extract_exif(file_bytes)
 
     paths = upload_photo_with_variants(photo_id, file_bytes, mime_type)
@@ -118,6 +134,7 @@ async def process_upload(
     return {
         "mime_type": mime_type,
         "file_size": len(file_bytes),
+        "original_filename": safe_filename,
         **exif_data,
         **paths,
     }

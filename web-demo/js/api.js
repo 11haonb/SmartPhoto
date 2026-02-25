@@ -55,6 +55,13 @@ const API = (() => {
       return null;
     }
     if (!res.ok) {
+      if (res.status === 401) {
+        clearAuth();
+        // Defer to avoid re-entrancy during navigation
+        setTimeout(() => {
+          if (typeof App !== 'undefined') App.navigate('login');
+        }, 0);
+      }
       throw new Error(data.detail || data.message || `Request failed: ${res.status}`);
     }
     return data;
