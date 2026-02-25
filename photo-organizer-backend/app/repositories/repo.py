@@ -101,6 +101,14 @@ class BatchRepository:
             batch.status = status
             await self._db.flush()
 
+    async def get_by_user(self, user_id: uuid.UUID) -> list[Batch]:
+        result = await self._db.execute(
+            select(Batch)
+            .where(Batch.user_id == user_id)
+            .order_by(Batch.created_at.desc())
+        )
+        return list(result.scalars().all())
+
 
 class PhotoRepository:
     def __init__(self, db: AsyncSession):

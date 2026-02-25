@@ -47,7 +47,13 @@ const API = (() => {
     }
     const res = await fetch(`${BASE_URL}${path}`, opts);
     if (res.status === 204) return null;
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (_) {
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      return null;
+    }
     if (!res.ok) {
       throw new Error(data.detail || data.message || `Request failed: ${res.status}`);
     }

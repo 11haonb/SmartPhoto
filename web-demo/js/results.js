@@ -6,6 +6,15 @@ const ResultsPage = (() => {
   let _activeTab = 'timeline';
   let _taskId = null;
 
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   async function render(params) {
     _taskId = params.taskId;
 
@@ -16,7 +25,11 @@ const ResultsPage = (() => {
       } catch (err) {
         const body = document.getElementById('results-body');
         if (body) {
-          body.innerHTML = `<div class="empty-state"><p>加载失败: ${err.message}</p></div>`;
+          const msg = document.createElement('div');
+          msg.className = 'empty-state';
+          msg.textContent = '加载失败: ' + err.message;
+          body.innerHTML = '';
+          body.appendChild(msg);
         }
       }
     }, 100);
@@ -114,13 +127,13 @@ const ResultsPage = (() => {
     return groups.map(g => `
       <div class="timeline-group">
         <div class="timeline-date">
-          <span>${g.date}</span>
-          <button class="export-btn" onclick="_ResultsExport('/export/by-date/${_taskId}?date=${g.date}')">导出</button>
+          <span>${esc(g.date)}</span>
+          <button class="export-btn" onclick="_ResultsExport('/export/by-date/${esc(_taskId)}?date=${esc(g.date)}')">导出</button>
         </div>
         <div class="photo-grid">
           ${g.photos.map(p => `
             <div class="photo-grid-item">
-              <img src="${photoThumb(p)}" alt="${photoName(p)}" loading="lazy">
+              <img src="${esc(photoThumb(p))}" alt="${esc(photoName(p))}" loading="lazy">
             </div>
           `).join('')}
         </div>
@@ -136,14 +149,14 @@ const ResultsPage = (() => {
     return cats.map(c => `
       <div class="category-group">
         <div class="category-header">
-          <span class="category-name">${c.category}${c.sub_category ? ' / ' + c.sub_category : ''}</span>
-          <span class="category-count">${c.count} 张</span>
-          <button class="export-btn" onclick="_ResultsExport('/export/by-category/${_taskId}?category=${encodeURIComponent(c.category)}')">导出</button>
+          <span class="category-name">${esc(c.category)}${c.sub_category ? ' / ' + esc(c.sub_category) : ''}</span>
+          <span class="category-count">${esc(c.count)} 张</span>
+          <button class="export-btn" onclick="_ResultsExport('/export/by-category/${esc(_taskId)}?category=${encodeURIComponent(c.category)}')">导出</button>
         </div>
         <div class="photo-grid">
           ${c.photos.map(p => `
             <div class="photo-grid-item">
-              <img src="${photoThumb(p)}" alt="${photoName(p)}" loading="lazy">
+              <img src="${esc(photoThumb(p))}" alt="${esc(photoName(p))}" loading="lazy">
             </div>
           `).join('')}
         </div>
@@ -164,12 +177,12 @@ const ResultsPage = (() => {
       if (a.is_overexposed) tags.push('<span class="issue-tag overexposed">过曝</span>');
       if (a.is_underexposed) tags.push('<span class="issue-tag underexposed">欠曝</span>');
       if (a.is_screenshot) tags.push('<span class="issue-tag screenshot">截图</span>');
-      if (a.is_invalid) tags.push(`<span class="issue-tag invalid">${a.invalid_reason || '无效'}</span>`);
+      if (a.is_invalid) tags.push(`<span class="issue-tag invalid">${esc(a.invalid_reason || '无效')}</span>`);
       return `
         <div class="issue-card">
-          <img src="${photoThumb(p)}" alt="${photoName(p)}">
+          <img src="${esc(photoThumb(p))}" alt="${esc(photoName(p))}">
           <div class="issue-info">
-            <div class="issue-filename">${photoName(p)}</div>
+            <div class="issue-filename">${esc(photoName(p))}</div>
             <div>${tags.join(' ')}</div>
           </div>
         </div>
@@ -184,20 +197,20 @@ const ResultsPage = (() => {
     }
     const exportAllBtn = `
       <div style="padding:12px 16px">
-        <button class="export-btn" style="width:100%;padding:10px" onclick="_ResultsExport('/export/best/${_taskId}')">导出全部最佳照片</button>
+        <button class="export-btn" style="width:100%;padding:10px" onclick="_ResultsExport('/export/best/${esc(_taskId)}')">导出全部最佳照片</button>
       </div>
     `;
     const groupsHtml = groups.map(g => `
       <div class="similarity-group">
-        <div class="similarity-header">相似组 · ${g.photos.length} 张照片</div>
+        <div class="similarity-header">相似组 · ${esc(g.photos.length)} 张照片</div>
         <div class="similarity-photos">
           ${g.photos.map(item => {
             const p = item.photo || item;
             const isBest = (item.analysis && item.analysis.is_best_in_group) ||
                            (p.id === g.best_photo_id);
             return `
-              <div class="similarity-photo ${isBest ? '' : 'selectable'}" ${!isBest ? `onclick="_ResultsMarkBest('${p.id}', '${g.group_id}')" title="点击设为最佳"` : ''}>
-                <img src="${photoThumb(p)}" alt="${photoName(p)}">
+              <div class="similarity-photo ${isBest ? '' : 'selectable'}" ${!isBest ? `onclick="_ResultsMarkBest('${esc(p.id)}', '${esc(g.group_id)}')" title="点击设为最佳"` : ''}>
+                <img src="${esc(photoThumb(p))}" alt="${esc(photoName(p))}">
                 ${isBest ? '<div class="best-badge">BEST</div>' : ''}
               </div>
             `;

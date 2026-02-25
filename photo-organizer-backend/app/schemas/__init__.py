@@ -71,7 +71,7 @@ class BatchCreateRequest(BaseModel):
     total_photos: int = Field(..., ge=1, le=100)
 
 
-class BatchResponse(BaseModel):
+class BatchListResponse(BaseModel):
     id: UUID
     status: str
     total_photos: int
@@ -79,6 +79,10 @@ class BatchResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# alias for backwards compat
+BatchResponse = BatchListResponse
 
 
 # ── Photo ──
@@ -184,6 +188,10 @@ class OrganizeResultsResponse(BaseModel):
     categories: list[CategoryGroup]
     invalid_photos: list[PhotoDetailResponse]
     similarity_groups: list[SimilarityGroup]
+    total_photos: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 # ── Settings ──

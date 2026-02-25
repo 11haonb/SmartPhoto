@@ -1,6 +1,7 @@
+import math
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -82,6 +83,8 @@ async def get_organize_status(
 @router.get("/results/{task_id}", response_model=OrganizeResultsResponse)
 async def get_organize_results(
     task_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -97,9 +100,12 @@ async def get_organize_results(
         )
 
     photo_repo = PhotoRepository(db)
-    photos = await photo_repo.get_by_batch(task.batch_id)
+    all_photos = await photo_repo.get_by_batch(task.batch_id)
+    total_photos = len(all_photos)
+    total_pages = max(1, math.ceil(total_photos / page_size))
+    offset = (page - 1) * page_size
+    photos = all_photos[offset: offset + page_size]
 
-    # Build timeline groups
     timeline_map: dict[str, list] = {}
     categories_map: dict[str, dict] = {}
     invalid_photos: list[PhotoDetailResponse] = []
@@ -117,12 +123,10 @@ async def get_organize_results(
 
         detail = PhotoDetailResponse(photo=photo_resp, analysis=analysis_resp)
 
-        # Timeline
         date_key = (photo.taken_at or photo.created_at).strftime("%Y-%m-%d")
         timeline_map.setdefault(date_key, []).append(photo_resp)
 
         if photo.analysis:
-            # Categories
             if photo.analysis.category:
                 cat_key = f"{photo.analysis.category}:{photo.analysis.sub_category or ''}"
                 if cat_key not in categories_map:
@@ -133,11 +137,9 @@ async def get_organize_results(
                     }
                 categories_map[cat_key]["photos"].append(photo_resp)
 
-            # Invalid photos
             if photo.analysis.is_invalid:
                 invalid_photos.append(detail)
 
-            # Similarity groups
             if photo.analysis.similarity_group:
                 group_id = photo.analysis.similarity_group
                 if group_id not in similarity_map:
@@ -150,7 +152,6 @@ async def get_organize_results(
         TimelineGroup(date=date, photos=photos_list)
         for date, photos_list in sorted(timeline_map.items(), reverse=True)
     ]
-
     categories = [
         CategoryGroup(
             category=data["category"],
@@ -160,7 +161,6 @@ async def get_organize_results(
         )
         for data in categories_map.values()
     ]
-
     similarity_groups = [
         SimilarityGroup(
             group_id=group_id,
@@ -176,4 +176,8 @@ async def get_organize_results(
         categories=categories,
         invalid_photos=invalid_photos,
         similarity_groups=similarity_groups,
+        total_photos=total_photos,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
     )

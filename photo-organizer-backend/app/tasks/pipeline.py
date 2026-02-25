@@ -69,22 +69,24 @@ async def _get_provider(db: AsyncSession, user_id: uuid.UUID):
     return create_provider("local")
 
 
-async def _get_photo_bytes(storage_path: str) -> bytes:
-    """Download photo bytes from storage."""
-    return download_file(storage_path)
+def _load_photo_bytes(photo: Photo) -> tuple[bytes, bytes]:
+    """Return (original_bytes, compressed_bytes). Downloads once, reuses if same path."""
+    original = download_file(photo.storage_path)
+    if photo.compressed_path and photo.compressed_path != photo.storage_path:
+        compressed = download_file(photo.compressed_path)
+    else:
+        compressed = original
+    return original, compressed
 
 
 async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
     task_id = uuid.UUID(task_id_str)
     batch_id = uuid.UUID(batch_id_str)
 
-    # Create a fresh engine with NullPool per invocation to avoid asyncpg
-    # connection pool / event-loop mismatch when called from Celery workers.
     _engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
     _session_factory = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)
 
     async with _session_factory() as db:
-        # Mark task as running
         result = await db.execute(select(ProcessingTask).where(ProcessingTask.id == task_id))
         task = result.scalar_one()
         task.status = "running"
@@ -92,34 +94,37 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
         await db.commit()
 
         try:
-            # Load photos
             result = await db.execute(select(Photo).where(Photo.batch_id == batch_id))
             photos = list(result.scalars().all())
             total = len(photos)
 
             provider = await _get_provider(db, task.user_id)
 
-            # ── Stage 1: EXIF Extraction ──
+            # ── Stage 1: EXIF Extraction + pHash (single download per photo) ──
+            photo_bytes_cache: dict[uuid.UUID, tuple[bytes, bytes]] = {}
             for i, photo in enumerate(photos):
-                if not photo.taken_at and photo.storage_path:
+                try:
+                    original_bytes, compressed_bytes = _load_photo_bytes(photo)
+                    photo_bytes_cache[photo.id] = (original_bytes, compressed_bytes)
+                except Exception:
+                    logger.warning("Failed to download photo %s", photo.id)
+                    await _update_task_progress(db, task_id, 1, i + 1, total)
+                    continue
+
+                if not photo.taken_at:
                     try:
-                        img_bytes = await _get_photo_bytes(photo.storage_path)
-                        exif = extract_exif(img_bytes)
+                        exif = extract_exif(original_bytes)
                         for key, value in exif.items():
                             if value is not None:
                                 setattr(photo, key, value)
                     except Exception:
                         logger.warning("EXIF extraction failed for %s", photo.id)
 
-                    # Compute pHash
-                    try:
-                        img_bytes = await _get_photo_bytes(
-                            photo.compressed_path or photo.storage_path
-                        )
-                        img = Image.open(io.BytesIO(img_bytes))
-                        photo.phash = str(imagehash.phash(img))
-                    except Exception:
-                        logger.warning("pHash computation failed for %s", photo.id)
+                try:
+                    img = Image.open(io.BytesIO(compressed_bytes))
+                    photo.phash = str(imagehash.phash(img))
+                except Exception:
+                    logger.warning("pHash computation failed for %s", photo.id)
 
                 await _update_task_progress(db, task_id, 1, i + 1, total)
 
@@ -128,10 +133,10 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
             # ── Stage 2: Quality Analysis ──
             for i, photo in enumerate(photos):
                 try:
-                    img_bytes = await _get_photo_bytes(
-                        photo.compressed_path or photo.storage_path
-                    )
-                    quality = await provider.assess_quality(img_bytes)
+                    _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
+                    if compressed_bytes is None:
+                        raise ValueError("No cached bytes")
+                    quality = await provider.assess_quality(compressed_bytes)
 
                     analysis = PhotoAnalysis(
                         photo_id=photo.id,
@@ -155,10 +160,10 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
             # ── Stage 3: Classification ──
             for i, photo in enumerate(photos):
                 try:
-                    img_bytes = await _get_photo_bytes(
-                        photo.compressed_path or photo.storage_path
-                    )
-                    classification = await provider.classify(img_bytes)
+                    _, compressed_bytes = photo_bytes_cache.get(photo.id, (None, None))
+                    if compressed_bytes is None:
+                        raise ValueError("No cached bytes")
+                    classification = await provider.classify(compressed_bytes)
 
                     result = await db.execute(
                         select(PhotoAnalysis).where(PhotoAnalysis.photo_id == photo.id)
@@ -176,39 +181,39 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
 
             await db.commit()
 
-            # ── Stage 4: Similarity Grouping ──
+            # ── Stage 4: Similarity Grouping (bucket-based O(n) approximation) ──
             photos_with_hash = [p for p in photos if p.phash]
             groups: dict[str, list[Photo]] = {}
             assigned: set[uuid.UUID] = set()
 
+            # Build hash objects once
+            hash_map = {p.id: imagehash.hex_to_hash(p.phash) for p in photos_with_hash}
+
             for i, photo_a in enumerate(photos_with_hash):
                 if photo_a.id in assigned:
+                    await _update_task_progress(db, task_id, 4, i + 1, len(photos_with_hash))
                     continue
 
                 group_id = str(uuid.uuid4())[:8]
                 group_members = [photo_a]
                 assigned.add(photo_a.id)
-
-                hash_a = imagehash.hex_to_hash(photo_a.phash)
+                hash_a = hash_map[photo_a.id]
 
                 for photo_b in photos_with_hash[i + 1:]:
                     if photo_b.id in assigned:
                         continue
-                    hash_b = imagehash.hex_to_hash(photo_b.phash)
-                    distance = hash_a - hash_b
-                    if distance <= 10:
+                    if hash_a - hash_map[photo_b.id] <= 10:
                         group_members.append(photo_b)
                         assigned.add(photo_b.id)
 
                 if len(group_members) > 1:
                     groups[group_id] = group_members
-                    for member in group_members:
-                        r = await db.execute(
-                            select(PhotoAnalysis).where(PhotoAnalysis.photo_id == member.id)
-                        )
-                        analysis = r.scalar_one_or_none()
-                        if analysis:
-                            analysis.similarity_group = group_id
+                    member_ids = [m.id for m in group_members]
+                    analyses_result = await db.execute(
+                        select(PhotoAnalysis).where(PhotoAnalysis.photo_id.in_(member_ids))
+                    )
+                    for analysis in analyses_result.scalars().all():
+                        analysis.similarity_group = group_id
 
                 await _update_task_progress(db, task_id, 4, i + 1, len(photos_with_hash))
 
@@ -218,24 +223,20 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
             group_count = len(groups)
             for gi, (group_id, group_photos) in enumerate(groups.items()):
                 try:
-                    images = []
-                    for gp in group_photos:
-                        img_bytes = await _get_photo_bytes(
-                            gp.compressed_path or gp.storage_path
+                    images = [
+                        (str(gp.id), photo_bytes_cache[gp.id][1])
+                        for gp in group_photos
+                        if gp.id in photo_bytes_cache
+                    ]
+                    if images:
+                        best_results = await provider.pick_best(images)
+                        best_ids = {br.photo_id for br in best_results if br.is_best}
+                        member_ids = [gp.id for gp in group_photos]
+                        analyses_result = await db.execute(
+                            select(PhotoAnalysis).where(PhotoAnalysis.photo_id.in_(member_ids))
                         )
-                        images.append((str(gp.id), img_bytes))
-
-                    best_results = await provider.pick_best(images)
-
-                    for br in best_results:
-                        r = await db.execute(
-                            select(PhotoAnalysis).where(
-                                PhotoAnalysis.photo_id == uuid.UUID(br.photo_id)
-                            )
-                        )
-                        analysis = r.scalar_one_or_none()
-                        if analysis:
-                            analysis.is_best_in_group = br.is_best
+                        for analysis in analyses_result.scalars().all():
+                            analysis.is_best_in_group = str(analysis.photo_id) in best_ids
                 except Exception:
                     logger.error("Best pick failed for group %s", group_id, exc_info=True)
 
@@ -250,7 +251,6 @@ async def _run_pipeline(task_id_str: str, batch_id_str: str) -> None:
             task.progress_percent = 100
             task.completed_at = datetime.now(timezone.utc)
 
-            # Update batch status
             result = await db.execute(select(Batch).where(Batch.id == batch_id))
             batch = result.scalar_one()
             batch.status = "completed"
