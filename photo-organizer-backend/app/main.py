@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.routes import auth, photos, organize, settings as settings_routes
+from app.api.routes import export
 
 
 def create_app() -> FastAPI:
@@ -40,6 +41,11 @@ def create_app() -> FastAPI:
         settings_routes.router,
         prefix="/api/v1/settings",
         tags=["settings"],
+    )
+    application.include_router(
+        export.router,
+        prefix="/api/v1/export",
+        tags=["export"],
     )
 
     @application.get("/health")

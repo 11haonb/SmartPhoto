@@ -1,10 +1,10 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import User, AIConfig, Batch, Photo, PhotoAnalysis, ProcessingTask
+from app.models import User, AIConfig, Batch, Photo, PhotoAnalysis, ProcessingTask, UserSelection
 
 
 class UserRepository:
@@ -145,6 +145,52 @@ class PhotoRepository:
         await self._db.flush()
         return photo
 
+    async def get_by_task_and_date(self, task_id: uuid.UUID, date_str: str) -> list[Photo]:
+        result = await self._db.execute(
+            select(Photo)
+            .options(selectinload(Photo.analysis))
+            .join(Batch, Photo.batch_id == Batch.id)
+            .join(ProcessingTask, ProcessingTask.batch_id == Batch.id)
+            .where(
+                ProcessingTask.id == task_id,
+                # cast taken_at or created_at date to string for comparison
+            )
+            .order_by(Photo.taken_at.asc().nullslast(), Photo.created_at.asc())
+        )
+        photos = list(result.scalars().all())
+        return [
+            p for p in photos
+            if (p.taken_at or p.created_at).strftime("%Y-%m-%d") == date_str
+        ]
+
+    async def get_by_task_and_category(self, task_id: uuid.UUID, category: str) -> list[Photo]:
+        result = await self._db.execute(
+            select(Photo)
+            .options(selectinload(Photo.analysis))
+            .join(Batch, Photo.batch_id == Batch.id)
+            .join(ProcessingTask, ProcessingTask.batch_id == Batch.id)
+            .join(PhotoAnalysis, PhotoAnalysis.photo_id == Photo.id)
+            .where(
+                ProcessingTask.id == task_id,
+                PhotoAnalysis.category == category,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_best_by_task(self, task_id: uuid.UUID) -> list[Photo]:
+        result = await self._db.execute(
+            select(Photo)
+            .options(selectinload(Photo.analysis))
+            .join(Batch, Photo.batch_id == Batch.id)
+            .join(ProcessingTask, ProcessingTask.batch_id == Batch.id)
+            .join(PhotoAnalysis, PhotoAnalysis.photo_id == Photo.id)
+            .where(
+                ProcessingTask.id == task_id,
+                PhotoAnalysis.is_best_in_group == True,
+            )
+        )
+        return list(result.scalars().all())
+
 
 class PhotoAnalysisRepository:
     def __init__(self, db: AsyncSession):
@@ -175,6 +221,31 @@ class PhotoAnalysisRepository:
         )
         return list(result.scalars().all())
 
+    async def unmark_best_in_group(self, similarity_group: str, task_id: uuid.UUID) -> None:
+        await self._db.execute(
+            update(PhotoAnalysis)
+            .where(
+                PhotoAnalysis.similarity_group == similarity_group,
+                PhotoAnalysis.photo_id.in_(
+                    select(Photo.id)
+                    .join(Batch, Photo.batch_id == Batch.id)
+                    .join(ProcessingTask, ProcessingTask.batch_id == Batch.id)
+                    .where(ProcessingTask.id == task_id)
+                )
+            )
+            .values(is_best_in_group=False)
+        )
+
+    async def mark_best(self, photo_id: uuid.UUID) -> PhotoAnalysis | None:
+        result = await self._db.execute(
+            select(PhotoAnalysis).where(PhotoAnalysis.photo_id == photo_id)
+        )
+        analysis = result.scalar_one_or_none()
+        if analysis:
+            analysis.is_best_in_group = True
+            await self._db.flush()
+        return analysis
+
 
 class ProcessingTaskRepository:
     def __init__(self, db: AsyncSession):
@@ -204,3 +275,38 @@ class ProcessingTaskRepository:
             setattr(task, key, value)
         await self._db.flush()
         return task
+
+
+class UserSelectionRepository:
+    def __init__(self, db: AsyncSession):
+        self._db = db
+
+    async def upsert(
+        self,
+        user_id: uuid.UUID,
+        photo_id: uuid.UUID,
+        similarity_group: str,
+        task_id: uuid.UUID,
+    ) -> UserSelection:
+        result = await self._db.execute(
+            select(UserSelection).where(
+                UserSelection.user_id == user_id,
+                UserSelection.similarity_group == similarity_group,
+                UserSelection.task_id == task_id,
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            existing.photo_id = photo_id
+            await self._db.flush()
+            return existing
+
+        selection = UserSelection(
+            user_id=user_id,
+            photo_id=photo_id,
+            similarity_group=similarity_group,
+            task_id=task_id,
+        )
+        self._db.add(selection)
+        await self._db.flush()
+        return selection

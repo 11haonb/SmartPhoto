@@ -4,13 +4,14 @@
 const ResultsPage = (() => {
   let _data = null;
   let _activeTab = 'timeline';
+  let _taskId = null;
 
   async function render(params) {
-    const taskId = params.taskId;
+    _taskId = params.taskId;
 
     setTimeout(async () => {
       try {
-        _data = await API.getOrganizeResults(taskId);
+        _data = await API.getOrganizeResults(_taskId);
         renderTabContent();
       } catch (err) {
         const body = document.getElementById('results-body');
@@ -70,6 +71,41 @@ const ResultsPage = (() => {
     return photo.original_filename || (photo.photo && photo.photo.original_filename) || 'unknown';
   }
 
+  async function handleExport(path) {
+    try {
+      await API.downloadZip(path);
+    } catch (err) {
+      App.showToast('导出失败: ' + err.message);
+    }
+  }
+
+  async function handleMarkBest(photoId, groupId) {
+    try {
+      await API.markBest(photoId, _taskId);
+      // update local data
+      const groups = _data.similarity_groups || [];
+      for (const g of groups) {
+        if (g.group_id === groupId) {
+          for (const item of g.photos) {
+            const p = item.photo || item;
+            if (item.analysis) {
+              item.analysis.is_best_in_group = (p.id === photoId);
+            }
+          }
+          g.best_photo_id = photoId;
+          break;
+        }
+      }
+      renderTabContent();
+    } catch (err) {
+      App.showToast('操作失败: ' + err.message);
+    }
+  }
+
+  // expose for inline onclick
+  window._ResultsMarkBest = handleMarkBest;
+  window._ResultsExport = handleExport;
+
   function renderTimeline() {
     const groups = _data.timeline || [];
     if (groups.length === 0) {
@@ -77,7 +113,10 @@ const ResultsPage = (() => {
     }
     return groups.map(g => `
       <div class="timeline-group">
-        <div class="timeline-date">${g.date}</div>
+        <div class="timeline-date">
+          <span>${g.date}</span>
+          <button class="export-btn" onclick="_ResultsExport('/export/by-date/${_taskId}?date=${g.date}')">导出</button>
+        </div>
         <div class="photo-grid">
           ${g.photos.map(p => `
             <div class="photo-grid-item">
@@ -99,6 +138,7 @@ const ResultsPage = (() => {
         <div class="category-header">
           <span class="category-name">${c.category}${c.sub_category ? ' / ' + c.sub_category : ''}</span>
           <span class="category-count">${c.count} 张</span>
+          <button class="export-btn" onclick="_ResultsExport('/export/by-category/${_taskId}?category=${encodeURIComponent(c.category)}')">导出</button>
         </div>
         <div class="photo-grid">
           ${c.photos.map(p => `
@@ -142,7 +182,12 @@ const ResultsPage = (() => {
     if (groups.length === 0) {
       return '<div class="empty-state"><p>暂无相似分组数据</p></div>';
     }
-    return groups.map(g => `
+    const exportAllBtn = `
+      <div style="padding:12px 16px">
+        <button class="export-btn" style="width:100%;padding:10px" onclick="_ResultsExport('/export/best/${_taskId}')">导出全部最佳照片</button>
+      </div>
+    `;
+    const groupsHtml = groups.map(g => `
       <div class="similarity-group">
         <div class="similarity-header">相似组 · ${g.photos.length} 张照片</div>
         <div class="similarity-photos">
@@ -151,7 +196,7 @@ const ResultsPage = (() => {
             const isBest = (item.analysis && item.analysis.is_best_in_group) ||
                            (p.id === g.best_photo_id);
             return `
-              <div class="similarity-photo ${isBest ? '' : 'dimmed'}">
+              <div class="similarity-photo ${isBest ? '' : 'selectable'}" ${!isBest ? `onclick="_ResultsMarkBest('${p.id}', '${g.group_id}')" title="点击设为最佳"` : ''}>
                 <img src="${photoThumb(p)}" alt="${photoName(p)}">
                 ${isBest ? '<div class="best-badge">BEST</div>' : ''}
               </div>
@@ -160,11 +205,13 @@ const ResultsPage = (() => {
         </div>
       </div>
     `).join('');
+    return exportAllBtn + groupsHtml;
   }
 
   function destroy() {
     _data = null;
     _activeTab = 'timeline';
+    _taskId = null;
   }
 
   return { render, switchTab, destroy };

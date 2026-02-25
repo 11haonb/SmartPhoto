@@ -194,3 +194,14 @@ class UserSettingsResponse(BaseModel):
 
 class UserSettingsUpdate(BaseModel):
     ai_config: AIConfigCreate | None = None
+
+
+# ── Mark Best ──
+class MarkBestRequest(BaseModel):
+    task_id: UUID
+
+
+class MarkBestResponse(BaseModel):
+    photo_id: UUID
+    similarity_group: str
+    is_best_in_group: bool

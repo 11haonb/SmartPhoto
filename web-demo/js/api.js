@@ -111,6 +111,33 @@ const API = (() => {
     return request('GET', '/settings/ai-providers');
   }
 
+  // Export & Best Pick
+  async function markBest(photoId, taskId) {
+    return request('PUT', `/photos/${photoId}/mark-best`, { task_id: taskId });
+  }
+
+  async function downloadZip(path) {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      headers: headers(),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || `Download failed: ${res.status}`);
+    }
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : 'smartphoto_export.zip';
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return {
     setAuth,
     clearAuth,
@@ -128,5 +155,7 @@ const API = (() => {
     getSettings,
     updateSettings,
     getAIProviders,
+    markBest,
+    downloadZip,
   };
 })();

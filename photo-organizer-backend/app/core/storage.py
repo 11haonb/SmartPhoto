@@ -38,6 +38,12 @@ def delete_file(key: str) -> None:
     client.delete_object(Bucket=settings.STORAGE_BUCKET, Key=key)
 
 
+def download_file(key: str) -> bytes:
+    client = _get_s3_client()
+    response = client.get_object(Bucket=settings.STORAGE_BUCKET, Key=key)
+    return response["Body"].read()
+
+
 def get_file_url(key: str) -> str:
     base = settings.STORAGE_PUBLIC_URL or settings.STORAGE_ENDPOINT
     return f"{base}/{settings.STORAGE_BUCKET}/{key}"

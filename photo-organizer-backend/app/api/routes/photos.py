@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user_id
 from app.core.storage import delete_file
-from app.repositories.repo import BatchRepository, PhotoRepository
+from app.repositories.repo import BatchRepository, PhotoRepository, PhotoAnalysisRepository, UserSelectionRepository
 from app.schemas import (
     BatchCreateRequest,
     BatchResponse,
@@ -14,6 +14,8 @@ from app.schemas import (
     PhotoResponse,
     PhotoUploadResponse,
     PhotoAnalysisResponse,
+    MarkBestRequest,
+    MarkBestResponse,
 )
 from app.services.photo_service import get_photo_urls, process_upload
 
@@ -140,3 +142,42 @@ async def delete_photo(
                 pass
 
     await photo_repo.delete(uuid.UUID(photo_id))
+
+
+@router.put("/{photo_id}/mark-best", response_model=MarkBestResponse)
+async def mark_best_photo(
+    photo_id: str,
+    request: MarkBestRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    photo_repo = PhotoRepository(db)
+    photo = await photo_repo.get_by_id(uuid.UUID(photo_id))
+    if photo is None or str(photo.user_id) != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
+
+    if not photo.analysis or not photo.analysis.similarity_group:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Photo has no similarity group",
+        )
+
+    similarity_group = photo.analysis.similarity_group
+
+    analysis_repo = PhotoAnalysisRepository(db)
+    await analysis_repo.unmark_best_in_group(similarity_group, request.task_id)
+    analysis = await analysis_repo.mark_best(uuid.UUID(photo_id))
+
+    selection_repo = UserSelectionRepository(db)
+    await selection_repo.upsert(
+        user_id=uuid.UUID(user_id),
+        photo_id=uuid.UUID(photo_id),
+        similarity_group=similarity_group,
+        task_id=request.task_id,
+    )
+
+    return MarkBestResponse(
+        photo_id=uuid.UUID(photo_id),
+        similarity_group=similarity_group,
+        is_best_in_group=analysis.is_best_in_group if analysis else True,
+    )
