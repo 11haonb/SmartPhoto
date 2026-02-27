@@ -11,8 +11,12 @@
 <p align="center">
   <a href="https://github.com/11haonb/SmartPhoto/actions"><img src="https://img.shields.io/github/actions/workflow/status/11haonb/SmartPhoto/ci.yml?branch=main&style=for-the-badge&label=CI" alt="CI"></a>
   <a href="https://github.com/11haonb/SmartPhoto/releases"><img src="https://img.shields.io/github/v/release/11haonb/SmartPhoto?include_prereleases&style=for-the-badge" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg?style=for-the-badge" alt="CC BY-NC-SA 4.0"></a>
   <a href="README_EN.md"><img src="https://img.shields.io/badge/English-README-green?style=for-the-badge" alt="English"></a>
+</p>
+
+<p align="center">
+  Created by <a href="https://github.com/11haonb"><strong>liujinqi</strong></a>
 </p>
 
 <p align="center">
